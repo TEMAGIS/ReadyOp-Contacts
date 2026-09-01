@@ -1,1 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ReadyOp Contacts</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>ReadyOp Contacts</h1>
+    <div class="topbar-right">
+      <span id="user-label"></span>
+      <button id="sign-out-btn" hidden>Sign out</button>
+    </div>
+  </header>
 
+  <div id="status-bar" role="status" hidden></div>
+
+  <main id="sign-in-screen" class="centered" hidden>
+    <p>Sign in with your ArcGIS account to edit ReadyOp contacts.</p>
+    <button id="sign-in-btn">Sign in with ArcGIS</button>
+  </main>
+
+  <main id="app-screen" class="app-layout" hidden>
+    <section class="list-pane">
+      <form id="search-form" class="search-form">
+        <input name="First" placeholder="First name" />
+        <input name="Last" placeholder="Last name" />
+        <input name="Organization" placeholder="Organization" />
+        <input name="Tags" placeholder="Tags" />
+        <button type="submit">Search</button>
+      </form>
+      <ul id="contact-list"></ul>
+      <div class="pager">
+        <button id="prev-page">&larr; Prev</button>
+        <span id="pager-info"></span>
+        <button id="next-page">Next &rarr;</button>
+      </div>
+    </section>
+
+    <section class="edit-pane">
+      <p id="edit-empty-state">Select a contact to edit.</p>
+      <div id="edit-panel" hidden>
+        <form id="edit-form">
+          <fieldset>
+            <legend>Identity</legend>
+            <label>First name <input name="First" required maxlength="16" /></label>
+            <label>Last name <input name="Last" /></label>
+            <label>Organization <input name="Organization" /></label>
+            <label>Title <input name="Title" /></label>
+            <label>Tags <input name="Tags" placeholder="comma-separated" /></label>
+          </fieldset>
+
+          <fieldset>
+            <legend>Phones</legend>
+            <div class="repeat-group" id="phones-group">
+              <div class="repeat-row" data-index="0">
+                <input name="Phone_0_Number" placeholder="Phone" />
+                <select name="Phone_0_Type">
+                  <option value="Cell">Cell</option>
+                  <option value="Desk">Desk</option>
+                  <option value="Home">Home</option>
+                  <option value="Work">Work</option>
+                </select>
+                <label class="checkbox"><input type="checkbox" name="Phone_0_Textable" /> Textable</label>
+              </div>
+              <div class="repeat-row" data-index="1">
+                <input name="Phone_1_Number" placeholder="Phone" />
+                <select name="Phone_1_Type">
+                  <option value="Cell">Cell</option>
+                  <option value="Desk">Desk</option>
+                  <option value="Home">Home</option>
+                  <option value="Work">Work</option>
+                </select>
+                <label class="checkbox"><input type="checkbox" name="Phone_1_Textable" /> Textable</label>
+              </div>
+              <div class="repeat-row" data-index="2">
+                <input name="Phone_2_Number" placeholder="Phone" />
+                <select name="Phone_2_Type">
+                  <option value="Cell">Cell</option>
+                  <option value="Desk">Desk</option>
+                  <option value="Home">Home</option>
+                  <option value="Work">Work</option>
+                </select>
+                <label class="checkbox"><input type="checkbox" name="Phone_2_Textable" /> Textable</label>
+              </div>
+              <div class="repeat-row" data-index="3">
+                <input name="Phone_3_Number" placeholder="Phone" />
+                <select name="Phone_3_Type">
+                  <option value="Cell">Cell</option>
+                  <option value="Desk">Desk</option>
+                  <option value="Home">Home</option>
+                  <option value="Work">Work</option>
+                </select>
+                <label class="checkbox"><input type="checkbox" name="Phone_3_Textable" /> Textable</label>
+              </div>
+              <div class="repeat-row" data-index="4">
+                <input name="Phone_4_Number" placeholder="Phone" />
+                <select name="Phone_4_Type">
+                  <option value="Cell">Cell</option>
+                  <option value="Desk">Desk</option>
+                  <option value="Home">Home</option>
+                  <option value="Work">Work</option>
+                </select>
+                <label class="checkbox"><input type="checkbox" name="Phone_4_Textable" /> Textable</label>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Emails</legend>
+            <div class="repeat-group" id="emails-group">
+              <div class="repeat-row" data-index="0">
+                <input name="Email_0_Address" placeholder="Email" type="email" />
+                <select name="Email_0_Type">
+                  <option value="Work">Work</option>
+                  <option value="Home">Home</option>
+                </select>
+              </div>
+              <div class="repeat-row" data-index="1">
+                <input name="Email_1_Address" placeholder="Email" type="email" />
+                <select name="Email_1_Type">
+                  <option value="Work">Work</option>
+                  <option value="Home">Home</option>
+                </select>
+              </div>
+              <div class="repeat-row" data-index="2">
+                <input name="Email_2_Address" placeholder="Email" type="email" />
+                <select name="Email_2_Type">
+                  <option value="Work">Work</option>
+                  <option value="Home">Home</option>
+                </select>
+              </div>
+              <div class="repeat-row" data-index="3">
+                <input name="Email_3_Address" placeholder="Email" type="email" />
+                <select name="Email_3_Type">
+                  <option value="Work">Work</option>
+                  <option value="Home">Home</option>
+                </select>
+              </div>
+              <div class="repeat-row" data-index="4">
+                <input name="Email_4_Address" placeholder="Email" type="email" />
+                <select name="Email_4_Type">
+                  <option value="Work">Work</option>
+                  <option value="Home">Home</option>
+                </select>
+              </div>
+            </div>
+          </fieldset>
+
+          <div class="form-actions">
+            <button type="submit">Save changes</button>
+          </div>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

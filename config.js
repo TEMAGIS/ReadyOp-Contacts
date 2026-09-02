@@ -88,6 +88,31 @@ export const CONFIG = {
   // REGION_FIELD is case-insensitive, so "Southeast" also matches a
   // "southeast" value in the data.
   REGION_OPTIONS: ["West", "Middle", "Southeast", "East"],
+
+  // --- Additional custom fields shown on the edit form (to match ReadyOp's
+  // own "Modify Contact" layout) ---
+  // CONFIRMED (2026-09-02) against the agency's own field mapping
+  // (County=Custom 1, Address=Custom 2, Address2=Custom 3, City=Custom 4,
+  // State=Custom 5, Zipcode=Custom 6, Fax=Custom 7, Region=Custom 8) —
+  // matches what had been inferred here, so no change was needed.
+  ADDRESS_FIELD: "Custom 2",
+  ADDRESS2_FIELD: "Custom 3",
+  CITY_FIELD: "Custom 4",
+  STATE_FIELD: "Custom 5",
+  ZIP_FIELD: "Custom 6",
+  FAX_FIELD: "Custom 7",
+  // "Share this contact with Public" and "Public Facing Phone Number"
+  // (seen in ReadyOp's New Contact dialog) still don't have an identified
+  // field — not in the confirmed mapping above either. They DO show on
+  // the edit form now (checkbox + masked phone input), but stay disabled
+  // there — greyed out with a tooltip — until these are set to a real
+  // "Custom N" field name. Once you know it (check the console
+  // diagnostic dump for a contact known to have one of these set, and
+  // compare which Custom slot holds it — or ask whoever gave you the
+  // other 8), set it here and the field enables itself automatically,
+  // no other code changes needed.
+  SHARE_PUBLIC_FIELD: null,
+  PUBLIC_PHONE_FIELD: null,
   // The County filter's options are NOT hardcoded — they're derived from
   // whatever distinct values actually appear in COUNTY_FIELD across the
   // loaded roster, sorted alphabetically. That also means inconsistent

@@ -9,7 +9,7 @@
        an old copy cached can keep using it even after you've pushed new
        files, which looks like "my fix isn't showing up." Bump this value
        (e.g. to today's date) any time you redeploy changed CSS/JS. -->
-  <link rel="stylesheet" href="styles.css?v=20260902d" />
+  <link rel="stylesheet" href="styles.css?v=20260902g" />
 </head>
 <body>
   <!-- ════════════════════════════════════════════════════════════
@@ -92,66 +92,110 @@
     <section class="edit-pane">
       <p id="edit-empty-state">Select a contact to edit.</p>
       <div id="edit-panel" hidden>
+        <button type="button" id="edit-back-btn" class="edit-back-btn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+          Back to list
+        </button>
         <form id="edit-form">
-          <fieldset>
-            <legend>Identity</legend>
-            <label>First name <input name="First" required maxlength="16" /></label>
-            <label>Last name <input name="Last" /></label>
-            <label>Organization <input name="Organization" /></label>
-            <label>Title <input name="Title" /></label>
-            <label>Tags <input name="Tags" placeholder="comma-separated" /></label>
-          </fieldset>
+          <!-- Laid out to mirror ReadyOp's own "Modify Contact" dialog:
+               two columns (General Info / Other Information) instead of
+               one long stack. -->
+          <div class="form-columns">
+            <fieldset class="form-col">
+              <legend>General Info</legend>
+              <label>First name <input name="First" required maxlength="16" /></label>
+              <label>Last name <input name="Last" /></label>
+              <label>Organization <input name="Organization" /></label>
+              <label>Title <input name="Title" /></label>
+              <label>Tags <input name="Tags" placeholder="comma-separated" /></label>
+              <label>PIN <input name="PIN" /></label>
+              <label>County <input name="County" list="county-datalist" placeholder="e.g. Davidson" /></label>
+              <label>Address <input name="Address" /></label>
+            </fieldset>
+            <datalist id="county-datalist"></datalist>
+
+            <fieldset class="form-col">
+              <legend>Other Information</legend>
+              <label>Address 2 <input name="Address2" /></label>
+              <label>City <input name="City" /></label>
+              <label>State <input name="State" maxlength="2" placeholder="TN" /></label>
+              <label>Zip <input name="Zip" /></label>
+              <label>Fax <input name="Fax" /></label>
+              <label>Region
+                <select name="Region" id="edit-region-select">
+                  <option value="">—</option>
+                </select>
+              </label>
+              <label class="checkbox-label" id="share-public-label">
+                <input type="checkbox" name="SharePublic" id="share-public-checkbox" />
+                Share this contact with Public
+              </label>
+              <label>Public Facing Phone Number
+                <input name="PublicPhone" id="public-phone-input" class="phone-mask" placeholder="(615) 555-1234" inputmode="tel" autocomplete="off" />
+              </label>
+            </fieldset>
+          </div>
 
           <fieldset>
             <legend>Phones</legend>
             <div class="repeat-group" id="phones-group">
               <div class="repeat-row" data-index="0">
-                <input name="Phone_0_Number" placeholder="Phone" />
+                <input name="Phone_0_Number" class="phone-mask" placeholder="(615) 555-1234" inputmode="tel" />
                 <select name="Phone_0_Type">
                   <option value="Cell">Cell</option>
                   <option value="Desk">Desk</option>
                   <option value="Home">Home</option>
+                  <option value="Satellite">Satellite</option>
                   <option value="Work">Work</option>
+                  <option value="Work Cell">Work Cell</option>
                 </select>
                 <label class="checkbox"><input type="checkbox" name="Phone_0_Textable" /> Textable</label>
               </div>
               <div class="repeat-row" data-index="1">
-                <input name="Phone_1_Number" placeholder="Phone" />
+                <input name="Phone_1_Number" class="phone-mask" placeholder="(615) 555-1234" inputmode="tel" />
                 <select name="Phone_1_Type">
                   <option value="Cell">Cell</option>
                   <option value="Desk">Desk</option>
                   <option value="Home">Home</option>
+                  <option value="Satellite">Satellite</option>
                   <option value="Work">Work</option>
+                  <option value="Work Cell">Work Cell</option>
                 </select>
                 <label class="checkbox"><input type="checkbox" name="Phone_1_Textable" /> Textable</label>
               </div>
               <div class="repeat-row" data-index="2">
-                <input name="Phone_2_Number" placeholder="Phone" />
+                <input name="Phone_2_Number" class="phone-mask" placeholder="(615) 555-1234" inputmode="tel" />
                 <select name="Phone_2_Type">
                   <option value="Cell">Cell</option>
                   <option value="Desk">Desk</option>
                   <option value="Home">Home</option>
+                  <option value="Satellite">Satellite</option>
                   <option value="Work">Work</option>
+                  <option value="Work Cell">Work Cell</option>
                 </select>
                 <label class="checkbox"><input type="checkbox" name="Phone_2_Textable" /> Textable</label>
               </div>
               <div class="repeat-row" data-index="3">
-                <input name="Phone_3_Number" placeholder="Phone" />
+                <input name="Phone_3_Number" class="phone-mask" placeholder="(615) 555-1234" inputmode="tel" />
                 <select name="Phone_3_Type">
                   <option value="Cell">Cell</option>
                   <option value="Desk">Desk</option>
                   <option value="Home">Home</option>
+                  <option value="Satellite">Satellite</option>
                   <option value="Work">Work</option>
+                  <option value="Work Cell">Work Cell</option>
                 </select>
                 <label class="checkbox"><input type="checkbox" name="Phone_3_Textable" /> Textable</label>
               </div>
               <div class="repeat-row" data-index="4">
-                <input name="Phone_4_Number" placeholder="Phone" />
+                <input name="Phone_4_Number" class="phone-mask" placeholder="(615) 555-1234" inputmode="tel" />
                 <select name="Phone_4_Type">
                   <option value="Cell">Cell</option>
                   <option value="Desk">Desk</option>
                   <option value="Home">Home</option>
+                  <option value="Satellite">Satellite</option>
                   <option value="Work">Work</option>
+                  <option value="Work Cell">Work Cell</option>
                 </select>
                 <label class="checkbox"><input type="checkbox" name="Phone_4_Textable" /> Textable</label>
               </div>
@@ -227,11 +271,26 @@
     <div class="buf-row" id="region-pill-row" role="group" aria-label="Filter by region"></div>
 
     <div class="buf-label">County</div>
-    <select id="county-select" aria-label="Filter by county">
-      <option value="">All counties</option>
-    </select>
+    <div class="combo" id="county-combo">
+      <input
+        type="text"
+        id="county-input"
+        class="combo-input"
+        placeholder="All counties"
+        autocomplete="off"
+        role="combobox"
+        aria-expanded="false"
+        aria-controls="county-listbox"
+        aria-autocomplete="list"
+        aria-label="Filter by county"
+      />
+      <button type="button" id="county-clear" class="combo-clear" aria-label="Clear county filter" hidden>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+      </button>
+      <ul id="county-listbox" class="combo-listbox" role="listbox" aria-label="Counties" hidden></ul>
+    </div>
   </div>
 
-  <script type="module" src="app.js?v=20260902d"></script>
+  <script type="module" src="app.js?v=20260902g"></script>
 </body>
 </html>

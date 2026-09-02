@@ -138,10 +138,50 @@ keep that.
 - **Create / delete contact** — the app only lists and edits existing
   contacts, per what was asked for. ReadyOp's docs describe Create/Delete
   endpoints too, so this is a natural next step if you want it.
-- **Other custom fields** — the API client and edit form only surface
-  Region (see below). Other `Custom_N` slots (e.g. County, address,
-  city/state/zip, fax — visible in your agency's Roster columns) aren't
-  in the edit form yet. Easy to add if you want them editable here too.
+- **"Share this contact with Public" / "Public Facing Phone Number"** —
+  seen in ReadyOp's own New Contact dialog, but not identified in the API
+  data yet, so they're not on the edit form. If you need them, open a test
+  contact that has one of these set in ReadyOp, load the same contact
+  here, and check the browser console's diagnostic dump (see below) for
+  which field holds that value.
+- **User Account / "Create User"** — ReadyOp's dialog can link a login
+  account to a contact; not exposed here.
+
+## The edit form's extra fields
+
+All confirmed: **County** (`Custom 1`), **Address** (`Custom 2`),
+**Address 2** (`Custom 3`), **City** (`Custom 4`), **State**
+(`Custom 5`), **Zip** (`Custom 6`), **Fax** (`Custom 7`), and **Region**
+(`Custom 8`) — matched against the agency's own field mapping. **PIN** is
+a genuine top-level API field.
+
+**"Share this contact with Public"** (a checkbox, sending `"Yes"` when
+checked and blank when not — matching ReadyOp's own "Yes or leave blank"
+convention) and **"Public Facing Phone Number"** (a masked phone input,
+same as the Phone Numbers section) are both on the form now, but stay
+**greyed out and disabled** until their `Custom N` field is known — there
+was no confirmed mapping for either as of this build, and writing to the
+wrong slot would silently overwrite whatever else lives there for a
+contact. Set `SHARE_PUBLIC_FIELD` / `PUBLIC_PHONE_FIELD` in `config.js`
+once you have the real field name (the same way you got the other 8) and
+the fields enable themselves automatically — no other code changes
+needed.
+
+## Phone number formatting
+
+Every phone number field (the 5 in Phones, plus Public Facing Phone
+Number) now formats as you type — typing digits produces
+`(615) 555-1234` automatically. This is display formatting only, done in
+the browser; whatever's shown is exactly what gets sent to ReadyOp on
+save.
+
+## Save confirmation
+
+The Save button itself briefly turns green and reads "✓ Saved" for about
+two seconds after a successful save (in addition to the status line at
+the top), so it's obvious the save went through without having to look
+elsewhere. It's disabled and reads "Saving…" while the request is in
+flight, so a slow save can't be double-submitted by an extra click.
 
 ## How the list loads: fetch the whole roster once, then work in memory
 
@@ -193,6 +233,37 @@ Either filter (or both together) shows a removable chip — "Region: West
 ×", "County: Fayette ×" — above the contact list, and lights up the
 Filter button itself while active.
 
+The County field is a type-to-filter combobox rather than a plain
+dropdown — with ~90+ counties in the data, scrolling a native `<select>`
+to find one was slow. Start typing to narrow the list live (matches
+anywhere in the name, not just the start); Arrow keys + Enter also work;
+"All counties" is always the first option so clearing the filter doesn't
+need the × chip. The edit form's own County field is a free-text input
+with the same list of known counties as type-ahead suggestions
+(`<datalist>`), since County is editable there too now (see below).
+
+## List width, and single-column view on narrow screens
+
+The list pane's column was widened (its old `minmax(260px, 340px)` cap
+was clipping the search box's placeholder text at "…tags"). Below 760px
+of viewport width, the layout also switches to a single-column view —
+matching how the sibling PREDS app behaves on mobile: the list takes the
+full width, and selecting a contact swaps in the edit pane full-width
+with a "Back to list" button, instead of both columns fighting for a
+too-narrow screen. Above that width, list and edit pane still sit side by
+side as before.
+
+## Edit form — matching ReadyOp's own Modify Contact layout
+
+The edit form now mirrors ReadyOp's native two-column "General Info" /
+"Other Information" layout instead of one long single-column stack, and
+gained several fields ReadyOp's own dialog shows that weren't editable
+here before: **PIN**, **County**, **Address**, **Address 2**, **City**,
+**State**, **Zip**, **Fax**, and **Region** (as a dropdown, matching the
+same options as the filter pills). See "The edit form's extra fields"
+below for the confirmed field mapping behind each of these.
+Phones and Emails keep their existing layout beneath the two columns.
+
 ReadyOp's REST API has no native "Region" or "County" field — in this
 agency's roster, they turned out to be two of ReadyOp's ten generic
 custom columns, exposed by the API as the JSON fields `"Custom 8"` and
@@ -209,8 +280,15 @@ Agency), update `REGION_FIELD`/`COUNTY_FIELD` in `config.js` to match.
 
 `index.html` loads `styles.css` and `app.js` with a `?v=...` query string
 specifically so browsers don't keep serving an old cached copy after
-you've pushed new files. **Bump that version string** (both occurrences,
-near the top of `index.html`) any time you redeploy changed CSS or JS —
+you've pushed new files. `app.js` also imports its sibling modules
+(`config.js`, `arcgis-auth.js`, `credentials.js`, `readyop-client.js`)
+with that same `?v=...` on each import — without it, editing just
+`config.js` (a common case — that's where the Region/County field names
+and options live) wouldn't get cache-busted at all, since only
+`index.html`'s own two tags carried a version string before. **Bump the
+version string everywhere it appears** any time you redeploy changed
+JS/CSS — the easiest way is a find-and-replace across the whole project
+for the old value (e.g. `20260902f`) to a new one (e.g. today's date) —
 otherwise a browser that already cached the old files may keep using
 them, which looks exactly like "my fix isn't showing up" even though the
 new files are live on GitHub Pages. If you ever see this happen despite a

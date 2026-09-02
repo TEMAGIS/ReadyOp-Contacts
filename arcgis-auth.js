@@ -17,7 +17,7 @@
 // CUSEC/TEMA app embedded the same way in Experience Builder.
 // ---------------------------------------------------------------------------
 
-import { CONFIG } from "./config.js";
+import { CONFIG } from "./config.js?v=20260902g";
 
 const AUTHORIZE_URL = `${CONFIG.ARCGIS_PORTAL_URL}/sharing/rest/oauth2/authorize`;
 const TOKEN_URL = `${CONFIG.ARCGIS_PORTAL_URL}/sharing/rest/oauth2/token`;
@@ -76,6 +76,10 @@ function tokenFromResponse(data) {
     expiresAt: now + expSec * 1000,
     refreshExpiresAt: refSec ? now + refSec * 1000 : (TOKEN && TOKEN.refreshExpiresAt) || null,
     username: data.username || (TOKEN && TOKEN.username) || null,
+    // The OAuth token response itself never includes this — carried over
+    // from a prior TOKEN (e.g. across a refresh) if already fetched, and
+    // populated separately by fetchDisplayName() below on a fresh sign-in.
+    fullName: (TOKEN && TOKEN.fullName) || null,
   };
 }
 
@@ -159,6 +163,35 @@ export function getToken() {
 }
 export function getUsername() {
   return TOKEN ? TOKEN.username : null;
+}
+
+/**
+ * Returns the signed-in user's display name ("First Last") for the
+ * topbar, instead of their ArcGIS username. Cached on the token object
+ * (and so in localStorage) after the first lookup, so normal page loads
+ * don't re-fetch it. Falls back to the username if the lookup fails or
+ * the account has no name set.
+ */
+export async function fetchDisplayName() {
+  if (!TOKEN) return null;
+  if (TOKEN.fullName) return TOKEN.fullName;
+  try {
+    const url = `${CONFIG.ARCGIS_PORTAL_URL}/sharing/rest/community/self?f=json&token=${encodeURIComponent(TOKEN.accessToken)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const fullName =
+      data.fullName ||
+      [data.firstName, data.lastName].filter(Boolean).join(" ").trim() ||
+      null;
+    if (fullName) {
+      TOKEN.fullName = fullName;
+      saveToken(TOKEN);
+      return fullName;
+    }
+  } catch (err) {
+    console.warn("Could not fetch ArcGIS display name, falling back to username:", err);
+  }
+  return TOKEN.username;
 }
 export function isSignedIn() {
   return !!TOKEN;

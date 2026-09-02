@@ -1,7 +1,7 @@
-import { CONFIG } from "./config.js";
-import * as auth from "./arcgis-auth.js";
-import { getReadyOpCredentials, clearCredentialsCache } from "./credentials.js";
-import { listContacts, getContact, updateContact } from "./readyop-client.js";
+import { CONFIG } from "./config.js?v=20260902g";
+import * as auth from "./arcgis-auth.js?v=20260902g";
+import { getReadyOpCredentials, clearCredentialsCache } from "./credentials.js?v=20260902g";
+import { listContacts, getContact, updateContact } from "./readyop-client.js?v=20260902g";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -15,11 +15,22 @@ const filterToggleBtn = $("#filter-toggle-btn");
 const regionDrawer = $("#region-drawer");
 const regionDrawerClose = $("#region-drawer-close");
 const regionPillRow = $("#region-pill-row");
-const countySelect = $("#county-select");
+const countyCombo = $("#county-combo");
+const countyInput = $("#county-input");
+const countyClear = $("#county-clear");
+const countyListbox = $("#county-listbox");
+const countyDatalist = $("#county-datalist");
+const editRegionSelect = $("#edit-region-select");
+const sharePublicCheckbox = $("#share-public-checkbox");
+const sharePublicLabel = $("#share-public-label");
+const publicPhoneInput = $("#public-phone-input");
+const saveBtn = $('#edit-form button[type="submit"]');
 const activeFiltersBar = $("#active-filters");
 const pagerInfo = $("#pager-info");
+const appLayoutEl = $("#app-screen");
 const editPanel = $("#edit-panel");
 const editForm = $("#edit-form");
+const editBackBtn = $("#edit-back-btn");
 const editEmptyState = $("#edit-empty-state");
 const loginError = $("#login-error");
 const oauthFallback = $("#oauth-fallback");
@@ -40,6 +51,7 @@ const knownCounties = new Set();
 let searchTerm = "";
 let activeRegion = ""; // "" = no Region filter
 let activeCounty = ""; // "" = no County filter
+let countyHighlightIndex = -1; // keyboard nav position in the open county combobox listbox
 
 // --- Rendering (reveals more of the already-filtered array as the user scrolls) ---
 let filteredContacts = [];
@@ -50,6 +62,53 @@ const SCROLL_LOAD_THRESHOLD_PX = 200;
 // pill pattern as the sibling PREDS app, for visual consistency) ---
 
 buildRegionPills();
+buildEditRegionOptions();
+applyUnmappedFieldGuards();
+attachPhoneMasks();
+
+/**
+ * "Share this contact with Public" and "Public Facing Phone Number" don't
+ * have a confirmed Custom-field mapping yet (see config.js) — rather than
+ * risk writing to the wrong slot, these two inputs start disabled with an
+ * explanatory tooltip and stay that way until CONFIG.SHARE_PUBLIC_FIELD /
+ * CONFIG.PUBLIC_PHONE_FIELD are set to a real field name.
+ */
+function applyUnmappedFieldGuards() {
+  if (!CONFIG.SHARE_PUBLIC_FIELD) {
+    sharePublicCheckbox.disabled = true;
+    const note = "Field mapping not yet identified — see SHARE_PUBLIC_FIELD in config.js";
+    sharePublicCheckbox.title = note;
+    sharePublicLabel.title = note;
+    sharePublicLabel.classList.add("field-pending");
+  }
+  if (!CONFIG.PUBLIC_PHONE_FIELD) {
+    publicPhoneInput.disabled = true;
+    publicPhoneInput.placeholder = "Not available yet";
+    publicPhoneInput.title = "Field mapping not yet identified — see PUBLIC_PHONE_FIELD in config.js";
+  }
+}
+
+/** Formats a phone number as the user types: "(615) 555-1234". Applied to every input with the .phone-mask class (the 5 Phone Number fields plus Public Facing Phone Number) so they all behave the same way. */
+function formatPhoneNumber(value) {
+  const digits = value.replace(/\D/g, "").slice(0, 10);
+  if (digits.length === 0) return "";
+  if (digits.length < 4) return `(${digits}`;
+  if (digits.length < 7) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
+function attachPhoneMasks() {
+  document.querySelectorAll("input.phone-mask").forEach((input) => {
+    input.addEventListener("input", () => {
+      input.value = formatPhoneNumber(input.value);
+      // Simple mask — always snaps the cursor to the end after
+      // reformatting, so editing in the middle of an existing number
+      // isn't pixel-perfect, but typing a fresh number (the normal
+      // case) formats live as expected.
+      input.setSelectionRange(input.value.length, input.value.length);
+    });
+  });
+}
 
 function buildRegionPills() {
   const allPill = document.createElement("button");
@@ -73,23 +132,115 @@ function buildRegionPills() {
   }
 }
 
-/** Rebuilds the County <select>'s options from whatever distinct values have been seen so far in COUNTY_FIELD across the loaded roster (called as more of the roster streams in, and once more when it finishes) — not a hardcoded list, since only the live data can say what's actually there (including any inconsistent spellings). */
-function refreshCountyOptions() {
-  const previousValue = countySelect.value;
-  countySelect.innerHTML = `<option value="">All counties</option>`;
-  [...knownCounties].sort((a, b) => a.localeCompare(b)).forEach((county) => {
+/** Populates the edit form's Region <select> from the same CONFIG.REGION_OPTIONS list the filter pills use, so the two stay in sync automatically. */
+function buildEditRegionOptions() {
+  for (const region of CONFIG.REGION_OPTIONS) {
     const opt = document.createElement("option");
-    opt.value = county;
-    opt.textContent = county;
-    countySelect.appendChild(opt);
-  });
-  // Restore the selection if that county is still in the (possibly
-  // regrown) list — it always will be once the roster has fully loaded,
-  // this only matters for the brief window while it's still streaming in.
-  if (previousValue && [...countySelect.options].some((o) => o.value === previousValue)) {
-    countySelect.value = previousValue;
+    opt.value = region;
+    opt.textContent = region;
+    editRegionSelect.appendChild(opt);
   }
 }
+
+function sortedCounties() {
+  return [...knownCounties].sort((a, b) => a.localeCompare(b));
+}
+
+/** Rebuilds the County combobox's known-values list (used to filter the drawer's type-ahead dropdown) and the edit form's County <datalist>, from whatever distinct values have been seen so far in COUNTY_FIELD across the loaded roster (called as more of the roster streams in, and once more when it finishes) — not a hardcoded list, since only the live data can say what's actually there (including any inconsistent spellings). */
+function refreshCountyOptions() {
+  const counties = sortedCounties();
+
+  countyDatalist.innerHTML = counties.map((c) => `<option value="${escapeHtml(c)}"></option>`).join("");
+
+  // If the drawer's listbox is currently open, re-render it against the
+  // (possibly grown) list and whatever the user has typed so far.
+  if (!countyListbox.hidden) renderCountyListbox(countyInput.value);
+}
+
+/** Renders the county combobox's dropdown list, filtered by `filterText` (case-insensitive substring match against county names) — "All counties" always appears first so clearing the filter is always one click away. */
+function renderCountyListbox(filterText) {
+  const term = (filterText || "").trim().toLowerCase();
+  const matches = sortedCounties().filter((c) => !term || c.toLowerCase().includes(term));
+
+  const rows = [`<li class="combo-option${activeCounty === "" ? " selected" : ""}" role="option" data-value="" aria-selected="${activeCounty === ""}">All counties</li>`];
+  if (matches.length === 0 && term) {
+    rows.push(`<li class="combo-option-empty">No counties match "${escapeHtml(filterText)}"</li>`);
+  } else {
+    for (const c of matches) {
+      rows.push(
+        `<li class="combo-option${activeCounty === c ? " selected" : ""}" role="option" data-value="${escapeHtml(c)}" aria-selected="${activeCounty === c}">${escapeHtml(c)}</li>`
+      );
+    }
+  }
+  countyListbox.innerHTML = rows.join("");
+  countyListbox.hidden = false;
+  countyInput.setAttribute("aria-expanded", "true");
+  countyHighlightIndex = -1;
+}
+
+function closeCountyListbox() {
+  countyListbox.hidden = true;
+  countyInput.setAttribute("aria-expanded", "false");
+  countyHighlightIndex = -1;
+}
+
+function highlightCountyOption(index) {
+  const options = [...countyListbox.querySelectorAll(".combo-option")];
+  options.forEach((el) => el.classList.remove("highlighted"));
+  if (index >= 0 && index < options.length) {
+    options[index].classList.add("highlighted");
+    options[index].scrollIntoView({ block: "nearest" });
+  }
+  countyHighlightIndex = index;
+}
+
+/** Applies a County filter selection — value "" clears it — from either a click/keyboard pick in the drawer's combobox or the chip's × button. */
+function selectCounty(value) {
+  activeCounty = value;
+  countyInput.value = value;
+  countyClear.hidden = !value;
+  closeCountyListbox();
+  updateActiveFiltersBar();
+  applyFilters();
+}
+
+countyInput.addEventListener("focus", () => renderCountyListbox(countyInput.value));
+countyInput.addEventListener("input", () => {
+  // Typing implicitly clears a previously-selected county until a new one
+  // is picked from the list — the input reflects free-typed search text,
+  // not necessarily the active filter, while the dropdown is open.
+  countyClear.hidden = !countyInput.value;
+  renderCountyListbox(countyInput.value);
+});
+countyInput.addEventListener("keydown", (e) => {
+  const options = [...countyListbox.querySelectorAll(".combo-option")];
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    if (countyListbox.hidden) renderCountyListbox(countyInput.value);
+    else highlightCountyOption(Math.min(countyHighlightIndex + 1, options.length - 1));
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    highlightCountyOption(Math.max(countyHighlightIndex - 1, 0));
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+    if (!countyListbox.hidden && countyHighlightIndex >= 0 && options[countyHighlightIndex]) {
+      selectCounty(options[countyHighlightIndex].dataset.value);
+    } else if (!countyListbox.hidden && options.length === 1) {
+      selectCounty(options[0].dataset.value);
+    }
+  } else if (e.key === "Escape") {
+    closeCountyListbox();
+  }
+});
+countyListbox.addEventListener("click", (e) => {
+  const opt = e.target.closest(".combo-option[data-value], .combo-option[data-value=\"\"]");
+  if (!opt) return;
+  selectCounty(opt.dataset.value || "");
+});
+countyClear.addEventListener("click", () => selectCounty(""));
+document.addEventListener("click", (e) => {
+  if (!countyCombo.contains(e.target)) closeCountyListbox();
+});
 
 function toggleRegionDrawer(forceClose = false) {
   const isOpen = regionDrawer.classList.contains("open");
@@ -126,16 +277,6 @@ function syncRegionPills() {
   });
 }
 
-countySelect.addEventListener("change", () => {
-  activeCounty = countySelect.value;
-  updateActiveFiltersBar();
-  applyFilters();
-  // County (unlike Region) doesn't close the drawer on selection — matches
-  // PREDS's own zone-filter pattern, which also stays open after picking,
-  // since a <select> doesn't have the same "I'm clearly done" signal a
-  // pill tap does.
-});
-
 function updateActiveFiltersBar() {
   filterToggleBtn.classList.toggle("has-filter", !!activeRegion || !!activeCounty);
   const chips = [];
@@ -154,12 +295,7 @@ activeFiltersBar.addEventListener("click", (e) => {
   if (!chip) return;
   const kind = chip.getAttribute("data-clear");
   if (kind === "region") setRegion("");
-  else if (kind === "county") {
-    activeCounty = "";
-    countySelect.value = "";
-    updateActiveFiltersBar();
-    applyFilters();
-  }
+  else if (kind === "county") selectCounty("");
 });
 
 function setStatus(message, isError = false) {
@@ -242,7 +378,16 @@ $("#sign-out-btn").addEventListener("click", () => {
 async function enterApp() {
   signInScreen.hidden = true;
   setStatus("Loading your account…");
+  // Show the username immediately (no network round trip needed), then
+  // swap in the person's actual full name once it's fetched — nicer for
+  // the topbar than an ArcGIS login handle like "aspraggins_CHAMPS".
   userLabel.textContent = auth.getUsername() || "Signed in";
+  auth
+    .fetchDisplayName()
+    .then((name) => {
+      if (name) userLabel.textContent = name;
+    })
+    .catch(() => {});
   $("#sign-out-btn").hidden = false;
 
   try {
@@ -410,6 +555,10 @@ contactList.addEventListener("scroll", () => {
   if (distanceFromBottom < SCROLL_LOAD_THRESHOLD_PX) revealMore();
 });
 
+editBackBtn.addEventListener("click", () => {
+  appLayoutEl.classList.remove("showing-edit");
+});
+
 async function selectContact(contactId) {
   selectedContactId = contactId;
   [...contactList.children].forEach((li) =>
@@ -417,6 +566,11 @@ async function selectContact(contactId) {
   );
   editEmptyState.hidden = true;
   editPanel.hidden = false;
+  // Below the narrow-viewport breakpoint (see styles.css), this swaps the
+  // list pane out for the edit pane — same "pick from a list, then see
+  // one thing full-screen" pattern PREDS uses on mobile. No-op above the
+  // breakpoint, since CSS only reacts to this class in that media query.
+  appLayoutEl.classList.add("showing-edit");
   setStatus("Loading contact…");
   try {
     const contact = await getContact(creds, contactId);
@@ -434,6 +588,30 @@ function populateEditForm(c) {
   editForm.Organization.value = c.Organization || "";
   editForm.Title.value = c.Title || "";
   editForm.Tags.value = c.Tags || "";
+  editForm.PIN.value = c.PIN || "";
+  editForm.County.value = c[CONFIG.COUNTY_FIELD] || "";
+  editForm.Address.value = c[CONFIG.ADDRESS_FIELD] || "";
+  editForm.Address2.value = c[CONFIG.ADDRESS2_FIELD] || "";
+  editForm.City.value = c[CONFIG.CITY_FIELD] || "";
+  editForm.State.value = c[CONFIG.STATE_FIELD] || "";
+  editForm.Zip.value = c[CONFIG.ZIP_FIELD] || "";
+  editForm.Fax.value = c[CONFIG.FAX_FIELD] || "";
+  // Match case-insensitively against the fixed option list (the source
+  // data has inconsistent casing, e.g. "southeast" vs "Southeast") so the
+  // dropdown still reflects the right selection either way.
+  const rawRegion = (c[CONFIG.REGION_FIELD] || "").trim();
+  const knownRegion = CONFIG.REGION_OPTIONS.find((r) => r.toLowerCase() === rawRegion.toLowerCase());
+  editForm.Region.value = knownRegion || "";
+
+  // Only populated once the field mapping is known (see
+  // applyUnmappedFieldGuards()) — the inputs stay disabled otherwise.
+  if (CONFIG.SHARE_PUBLIC_FIELD) {
+    const raw = (c[CONFIG.SHARE_PUBLIC_FIELD] || "").trim().toLowerCase();
+    editForm.SharePublic.checked = raw === "yes" || raw === "y" || raw === "true";
+  }
+  if (CONFIG.PUBLIC_PHONE_FIELD) {
+    editForm.PublicPhone.value = formatPhoneNumber(c[CONFIG.PUBLIC_PHONE_FIELD] || "");
+  }
 
   const phones = c.Phones || [];
   for (let i = 0; i < 5; i++) {
@@ -461,7 +639,23 @@ editForm.addEventListener("submit", async (e) => {
     Organization: data.get("Organization") || "",
     Title: data.get("Title") || "",
     Tags: data.get("Tags") || "",
+    PIN: data.get("PIN") || "",
+    [CONFIG.COUNTY_FIELD]: data.get("County") || "",
+    [CONFIG.ADDRESS_FIELD]: data.get("Address") || "",
+    [CONFIG.ADDRESS2_FIELD]: data.get("Address2") || "",
+    [CONFIG.CITY_FIELD]: data.get("City") || "",
+    [CONFIG.STATE_FIELD]: data.get("State") || "",
+    [CONFIG.ZIP_FIELD]: data.get("Zip") || "",
+    [CONFIG.FAX_FIELD]: data.get("Fax") || "",
+    [CONFIG.REGION_FIELD]: data.get("Region") || "",
   };
+  // Only sent once the field mapping is known — see applyUnmappedFieldGuards().
+  if (CONFIG.SHARE_PUBLIC_FIELD) {
+    fields[CONFIG.SHARE_PUBLIC_FIELD] = data.get("SharePublic") ? "Yes" : "";
+  }
+  if (CONFIG.PUBLIC_PHONE_FIELD) {
+    fields[CONFIG.PUBLIC_PHONE_FIELD] = data.get("PublicPhone") || "";
+  }
   for (let i = 0; i < 5; i++) {
     const number = data.get(`Phone_${i}_Number`);
     if (number) {
@@ -477,6 +671,10 @@ editForm.addEventListener("submit", async (e) => {
   }
 
   setStatus("Saving…");
+  saveBtn.disabled = true;
+  saveBtn.classList.remove("save-success");
+  const originalLabel = saveBtn.textContent;
+  saveBtn.textContent = "Saving…";
   try {
     await updateContact(creds, contactId, fields);
     setStatus("Saved.");
@@ -487,8 +685,27 @@ editForm.addEventListener("submit", async (e) => {
     // shows the edit instead of the stale pre-save name/org/title/tags.
     const cached = allContacts.find((c) => String(c["Contact ID"]) === String(contactId));
     if (cached) Object.assign(cached, fields);
+    // Pick up a newly-typed county that wasn't already in the roster's
+    // known list, so it immediately shows up as a filter/datalist option.
+    const newCounty = fields[CONFIG.COUNTY_FIELD];
+    if (newCounty && !knownCounties.has(newCounty)) {
+      knownCounties.add(newCounty);
+      refreshCountyOptions();
+    }
+    // Unmistakable save confirmation right on the button itself — a
+    // status-bar line alone was easy to miss. Flashes green with a
+    // checkmark for a couple seconds, then settles back to normal.
+    saveBtn.textContent = "✓ Saved";
+    saveBtn.classList.add("save-success");
+    saveBtn.disabled = false;
+    setTimeout(() => {
+      saveBtn.classList.remove("save-success");
+      saveBtn.textContent = originalLabel;
+    }, 2200);
   } catch (err) {
     setStatus(`Save failed: ${err.message}`, true);
+    saveBtn.textContent = originalLabel;
+    saveBtn.disabled = false;
   }
 });
 

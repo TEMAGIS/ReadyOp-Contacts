@@ -154,7 +154,11 @@ button[type="submit"] { background: var(--accent); color: #fff; border-color: va
 
 .app-layout {
   display: grid;
-  grid-template-columns: minmax(260px, 340px) 1fr;
+  /* Widened from the original minmax(260px,340px) — that cap was clipping
+     the search placeholder text ("…tags" got cut off). 440px echoes the
+     width PREDS itself settles on for its own single-column mobile layout
+     and its filter-drawer panel. */
+  grid-template-columns: minmax(320px, 440px) 1fr;
   height: calc(100vh - 90px);
 }
 
@@ -169,6 +173,29 @@ button[type="submit"] { background: var(--accent); color: #fff; border-color: va
      it — this is what caused "Last name"/"Tags" to run under the right
      panel. */
   min-width: 0;
+}
+
+/* ── Narrow-viewport layout ────────────────────────────────────────
+   Below this width there's no room for list + edit side by side (this is
+   what was happening in the narrow Experience Builder sidebar — the list
+   pane was being squeezed and its placeholder text clipped). Below the
+   breakpoint, switch to PREDS-mobile-style single-column behavior: show
+   only one pane at a time, full width, with a "Back to list" button to
+   return — rather than a fixed narrow column always sharing space with a
+   pane that has nowhere to go. */
+@media (max-width: 760px) {
+  .app-layout {
+    display: block;
+    height: calc(100vh - 90px);
+  }
+  .app-layout .list-pane,
+  .app-layout .edit-pane {
+    height: 100%;
+  }
+  .list-pane { border-right: none; }
+  .app-layout.showing-edit .list-pane { display: none; }
+  .app-layout:not(.showing-edit) .edit-pane { display: none; }
+  .edit-back-btn { display: inline-flex; }
 }
 
 .sr-only {
@@ -332,18 +359,69 @@ button[type="submit"] { background: var(--accent); color: #fff; border-color: va
 .buft:hover { background: rgba(255, 255, 255, 0.18); }
 .buft.active { background: #fff; color: var(--tema-blue); border-color: #fff; }
 
-#county-select {
+/* ── County combobox ──────────────────────────────────────────────
+   A type-to-filter combobox instead of a plain <select> — with ~90+
+   counties, scrolling a native dropdown to find one is slow. Typing
+   narrows the list live; arrow keys + Enter also work. */
+.combo { position: relative; }
+.combo-input {
   width: 100%;
-  padding: 0.55rem 0.6rem;
+  padding: 0.55rem 2rem 0.55rem 0.6rem;
   border: 1.5px solid rgba(255, 255, 255, 0.35);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.08);
   color: #fff;
   font-size: 0.85rem;
   font-family: inherit;
+  outline: none;
 }
-#county-select:focus { outline: 3px solid var(--focus); outline-offset: 1px; }
-#county-select option { color: #1c2126; }
+.combo-input::placeholder { color: rgba(255, 255, 255, 0.65); }
+.combo-input:focus { outline: 3px solid var(--focus); outline-offset: 1px; }
+.combo-clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+}
+.combo-clear:hover { background: rgba(255, 255, 255, 0.26); }
+.combo-listbox {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+}
+.combo-listbox[hidden] { display: none; }
+.combo-option {
+  padding: 0.5rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #1c2126;
+  cursor: pointer;
+}
+.combo-option:hover,
+.combo-option.highlighted { background: var(--bg-subtle); }
+.combo-option.selected { color: var(--tema-blue); font-weight: 700; }
+.combo-option-empty { padding: 0.6rem; font-size: 0.8rem; color: var(--text-muted); cursor: default; }
 
 #contact-list {
   list-style: none;
@@ -405,10 +483,35 @@ button[type="submit"] { background: var(--accent); color: #fff; border-color: va
 .edit-pane { padding: 1.5rem; overflow-y: auto; background: var(--bg-subtle); }
 #edit-empty-state { color: var(--text-muted); }
 
+.edit-back-btn {
+  display: none; /* only shown below the 760px stacking breakpoint */
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 1rem;
+  background: #fff;
+  font-weight: 600;
+  color: var(--tema-blue);
+  border-color: var(--border);
+}
+
 /* Cap the edit form's width so fieldsets don't balloon into oversized
    blocks on wide screens — the form reads better as a column than as a
    full-bleed sheet. */
-#edit-form { max-width: 640px; }
+#edit-form { max-width: 720px; }
+
+/* Two-column General Info / Other Information layout, mirroring
+   ReadyOp's own Modify Contact dialog instead of one long single-column
+   stack of fields. */
+.form-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.1rem;
+  margin-bottom: 1.1rem;
+}
+@media (max-width: 560px) {
+  .form-columns { grid-template-columns: 1fr; }
+}
+.form-col { margin-bottom: 0; }
 
 fieldset {
   border: 1px solid var(--border);
@@ -471,5 +574,35 @@ legend {
   color: #fff;
   font-weight: 600;
   padding: 0.55rem 1.1rem;
+  min-width: 132px;
+  transition: background-color 0.2s, border-color 0.2s;
 }
 .form-actions button[type="submit"]:hover { background: #001d4d; border-color: #001d4d; }
+.form-actions button[type="submit"]:disabled { opacity: 0.75; cursor: default; }
+/* Unmistakable save confirmation — the button itself flashes green with
+   a checkmark for a couple seconds after a successful save, rather than
+   relying only on the small status-bar line up top. */
+.form-actions button[type="submit"].save-success {
+  background: #1a7f37;
+  border-color: #1a7f37;
+}
+
+/* Standalone checkbox field (e.g. "Share this contact with Public") —
+   not inside a .repeat-row, so styled to sit like the other #edit-form
+   labels but lay the checkbox and its text out inline. */
+#edit-form label.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.1rem;
+}
+#edit-form label.checkbox-label input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+/* A field whose ReadyOp custom-column mapping isn't known yet (see
+   config.js) — shown but disabled, rather than hidden, so it's obvious
+   the field exists and will start working once the mapping is filled
+   in. */
+#edit-form label.checkbox-label.field-pending { color: #9aa3ad; cursor: not-allowed; }
+#edit-form input:disabled { background: #f1f3f5; color: #9aa3ad; cursor: not-allowed; }

@@ -350,6 +350,17 @@ row (a bordered card with a larger checkbox, `accent-color:
 var(--tema-blue)`) rather than a plain inline checkbox+label, for the
 same reason.
 
+**Checking "Share this contact with Public" turns Public Contact and
+Address green.** A quick, glanceable "this one's public" signal — since
+Address is where the actual mailing info being shared lives, and it
+isn't right next to the checkbox on screen, a plain checkmark alone was
+easy to miss when scanning down the form. Both fieldsets get an
+`.is-public` class (green-tinted background, green border and legend)
+toggled by `syncPublicContactHighlight()` in `app.js`, on every change of
+the checkbox and once when a contact's data first loads into the form —
+so a contact that's already marked public shows green immediately, not
+just after you touch the checkbox.
+
 ReadyOp's REST API has no native "Region" or "County" field — in this
 agency's roster, they turned out to be two of ReadyOp's ten generic
 custom columns, exposed by the API as the JSON fields `"Custom 8"` and

@@ -632,6 +632,19 @@ legend {
   border-color: var(--border);
 }
 
+/* When "Share this contact with Public" is checked, tint both this
+   section AND the Address section green (`.is-public`, toggled in
+   app.js by syncPublicContactHighlight() — on checkbox change and when
+   the edit form loads) — a quick, glanceable "this one's public" signal
+   that doesn't require scrolling back up to re-check the checkbox,
+   since Address sits below Public Contact and its own fields (mailing
+   address, etc.) are exactly the kind of info being shared. */
+#edit-form fieldset.is-public {
+  background: #e9f7ee;
+  border-color: #1a7f37;
+}
+#edit-form fieldset.is-public legend { color: #1a7f37; }
+
 /* ── Tags picker ───────────────────────────────────────────────────
    Type-to-add/select chip picker (multi-select version of the Region
    pills), replacing a raw comma-separated text box. Reuses the same

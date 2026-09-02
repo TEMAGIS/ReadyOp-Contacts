@@ -9,7 +9,7 @@
        an old copy cached can keep using it even after you've pushed new
        files, which looks like "my fix isn't showing up." Bump this value
        (e.g. to today's date) any time you redeploy changed CSS/JS. -->
-  <link rel="stylesheet" href="styles.css?v=20260902n" />
+  <link rel="stylesheet" href="styles.css?v=20260902o" />
 </head>
 <body>
   <!-- ════════════════════════════════════════════════════════════
@@ -170,7 +170,7 @@
                  broadest/top-level grouping) followed by the street-level
                  fields, with Address itself moved up from General Info so
                  nothing address-related is split across two fieldsets. -->
-            <fieldset class="form-col">
+            <fieldset class="form-col" id="address-fieldset">
               <legend>Address</legend>
               <label>Region
                 <select name="Region" id="edit-region-select">
@@ -304,6 +304,6 @@
     </section>
   </main>
 
-  <script type="module" src="app.js?v=20260902n"></script>
+  <script type="module" src="app.js?v=20260902o"></script>
 </body>
 </html>

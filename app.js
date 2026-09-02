@@ -1,7 +1,7 @@
-import { CONFIG } from "./config.js?v=20260902n";
-import * as auth from "./arcgis-auth.js?v=20260902n";
-import { getReadyOpCredentials, clearCredentialsCache } from "./credentials.js?v=20260902n";
-import { listContacts, getContact, updateContact } from "./readyop-client.js?v=20260902n";
+import { CONFIG } from "./config.js?v=20260902o";
+import * as auth from "./arcgis-auth.js?v=20260902o";
+import { getReadyOpCredentials, clearCredentialsCache } from "./credentials.js?v=20260902o";
+import { listContacts, getContact, updateContact } from "./readyop-client.js?v=20260902o";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -22,6 +22,8 @@ const editRegionSelect = $("#edit-region-select");
 const sharePublicCheckbox = $("#share-public-checkbox");
 const sharePublicLabel = $("#share-public-label");
 const publicPhoneInput = $("#public-phone-input");
+const publicContactFieldset = $(".public-contact-fieldset");
+const addressFieldset = $("#address-fieldset");
 const tagsField = $("#tags-field");
 const tagsChips = $("#tags-chips");
 const tagsInput = $("#tags-input");
@@ -94,6 +96,14 @@ function applyUnmappedFieldGuards() {
     publicPhoneInput.title = "Field mapping not yet identified — see PUBLIC_PHONE_FIELD in config.js";
   }
 }
+
+/** Tints the Public Contact and Address sections green (`.is-public` in styles.css) while "Share this contact with Public" is checked — a quick, glanceable "this one's public" signal, since Address (the mailing info actually being shared) sits below Public Contact rather than right next to the checkbox. Called on every checkbox change and once when the edit form loads. */
+function syncPublicContactHighlight() {
+  const isPublic = sharePublicCheckbox.checked;
+  publicContactFieldset.classList.toggle("is-public", isPublic);
+  addressFieldset.classList.toggle("is-public", isPublic);
+}
+sharePublicCheckbox.addEventListener("change", syncPublicContactHighlight);
 
 /** Formats a phone number as the user types, and also used to reformat numbers already on file when the edit form loads: "(615) 555-1234". Applied to every input with the .phone-mask class (the 5 Phone Number fields plus Public Facing Phone Number) so they all behave the same way. */
 function formatPhoneNumber(value) {
@@ -822,6 +832,7 @@ function populateEditForm(c) {
   if (CONFIG.PUBLIC_PHONE_FIELD) {
     editForm.PublicPhone.value = formatPhoneNumber(c[CONFIG.PUBLIC_PHONE_FIELD] || "");
   }
+  syncPublicContactHighlight();
 
   // Reformats whatever's already on file (e.g. ReadyOp's own
   // "+16153064619") through the same formatPhoneNumber() used while

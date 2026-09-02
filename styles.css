@@ -635,11 +635,21 @@ legend {
   align-items: flex-start;
   gap: 0.7rem 1rem;
 }
+/* margin-bottom 0.2rem here (not the usual 0.42rem #edit-form labels
+   use) to match the phone input's own margin-top exactly -- see
+   #edit-form label.checkbox-label.public-checkbox below, which zeroes
+   out its inherited margin-top for the same reason. The phone field's
+   label+input is one element (label wraps its input directly), so its
+   only label-to-control gap is the input's 0.2rem margin-top; the
+   checkbox is a separate title span *plus* a separate checkbox-label
+   below it, so without this the two gaps stack (0.42rem + the
+   checkbox-label's 0.1rem) and the checkbox pill sits visibly lower
+   than the phone input beside it instead of level with it. */
 .public-contact-field-title {
   display: block;
   font-size: 0.78rem;
   color: var(--text-muted);
-  margin-bottom: 0.42rem;
+  margin-bottom: 0.2rem;
 }
 /* Public Contact is now constrained to a single grid column (about half
    the form's width — see fieldset.public-contact-fieldset) rather than
@@ -657,6 +667,11 @@ legend {
    .checkbox-label — this is the one checked most often, over and over,
    while working through a list of contacts. */
 #edit-form label.checkbox-label.public-checkbox {
+  /* Cancels the 0.1rem margin-top every .checkbox-label gets by default
+     -- combined with .public-contact-field-title's margin-bottom above,
+     that pairing is tuned to land this checkbox pill's top edge level
+     with the phone input beside it. */
+  margin-top: 0;
   gap: 0.6rem;
   padding: 0.55rem 0.85rem;
   border: 1.5px solid var(--border);

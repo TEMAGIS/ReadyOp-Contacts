@@ -269,6 +269,12 @@ County offers (see below):
   merged — only someone who knows the data should decide which spelling
   is canonical.
 
+The pill buttons and the County combobox render at the same fixed height
+(34px) so the two rows line up with each other in the header — each
+control's own natural padding/border added up to noticeably different
+heights otherwise (the combobox came out a few pixels taller), which
+looked uneven side by side.
+
 **Region narrows County:** once a Region is selected, the County
 combobox only offers counties that actually appear under that Region in
 the loaded roster (built from the same roster fetch, in
@@ -339,7 +345,8 @@ since it's the broadest grouping (which part of the state), then the
 street-level fields.
 
 **"Public Contact" sits first, in its own top-left section, with Save
-changes beside it.** The "Share this contact with Public" checkbox and
+changes beside it.** The "Share with public" checkbox (originally
+labeled "Share this contact with Public" — shortened, see below) and
 Public Facing Phone Number used to be the last two fields tucked into
 Other Information; they're broken out into their own titled section
 (`.public-contact-fieldset`) with a tinted background so it's easy to
@@ -348,24 +355,40 @@ form now, rather than buried below General Info/Address, since it's
 checked on a lot of contacts in a row. It briefly spanned the full width
 of the form; it's now constrained to just the top-left grid cell instead,
 with the **Save changes** button moved up out of its old spot below
-every other field and into the top-right cell beside it — so the field
-you check most often and the button you click to save it are both
-visible together, without scrolling past General Info/Address/Phones/
-Emails first. The checkbox itself is also bigger and styled as its own
-clickable row (a bordered card with a larger checkbox, `accent-color:
-var(--tema-blue)`) rather than a plain inline checkbox+label, for the
-same reason.
+every other field and into the top-right cell beside it (right-justified
+within that cell via `.form-actions { justify-content: flex-end }`, same
+as before) — so the field you check most often and the button you click
+to save it are both visible together, without scrolling past General
+Info/Address/Phones/Emails first. The checkbox itself is also bigger and
+styled as its own clickable row (a bordered card with a larger checkbox,
+`accent-color: var(--tema-blue)`) rather than a plain inline
+checkbox+label, for the same reason.
 
-**Checking "Share this contact with Public" turns Public Contact and
-Address green.** A quick, glanceable "this one's public" signal — since
-Address is where the actual mailing info being shared lives, and it
-isn't right next to the checkbox on screen, a plain checkmark alone was
-easy to miss when scanning down the form. Both fieldsets get an
-`.is-public` class (green-tinted background, green border and legend)
-toggled by `syncPublicContactHighlight()` in `app.js`, on every change of
-the checkbox and once when a contact's data first loads into the form —
-so a contact that's already marked public shows green immediately, not
-just after you touch the checkbox.
+**Checkbox and phone field line up, and fit on one line.** Once Public
+Contact was constrained to a half-width column, the checkbox's original
+label ("Share this contact with Public") was long enough that it and
+Public Facing Phone Number no longer fit side by side and wrapped onto
+two lines — shortened to **"Share with public"** to fit comfortably on
+one line again. The two fields were also misaligned vertically: the
+phone field has a label above its input, while the checkbox (a
+single-line control) had nothing above it, so centering the two against
+their very different heights left the checkbox floating up near the
+phone field's *label* instead of level with its *input*. Fixed by giving
+the checkbox its own matching label — **"Sharing"** — above it
+(`.public-contact-field-title`, styled identically to every other
+field's label), then top-aligning the row (`align-items: flex-start`)
+now that both fields have the same label-then-control shape.
+
+**Checking "Share with public" turns Public Contact and Address green.**
+A quick, glanceable "this one's public" signal — since Address is where
+the actual mailing info being shared lives, and it isn't right next to
+the checkbox on screen, a plain checkmark alone was easy to miss when
+scanning down the form. Both fieldsets get an `.is-public` class
+(green-tinted background, green border and legend) toggled by
+`syncPublicContactHighlight()` in `app.js`, on every change of the
+checkbox and once when a contact's data first loads into the form — so a
+contact that's already marked public shows green immediately, not just
+after you touch the checkbox.
 
 ReadyOp's REST API has no native "Region" or "County" field — in this
 agency's roster, they turned out to be two of ReadyOp's ten generic

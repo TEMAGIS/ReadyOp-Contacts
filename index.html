@@ -9,7 +9,7 @@
        an old copy cached can keep using it even after you've pushed new
        files, which looks like "my fix isn't showing up." Bump this value
        (e.g. to today's date) any time you redeploy changed CSS/JS. -->
-  <link rel="stylesheet" href="styles.css?v=20260902p" />
+  <link rel="stylesheet" href="styles.css?v=20260902q" />
 </head>
 <body>
   <!-- ════════════════════════════════════════════════════════════
@@ -137,10 +137,13 @@
             <fieldset class="form-col public-contact-fieldset">
               <legend>Public Contact</legend>
               <div class="public-contact-row">
-                <label class="checkbox-label public-checkbox" id="share-public-label">
-                  <input type="checkbox" name="SharePublic" id="share-public-checkbox" />
-                  Share this contact with Public
-                </label>
+                <div class="public-checkbox-field">
+                  <span class="public-contact-field-title">Sharing</span>
+                  <label class="checkbox-label public-checkbox" id="share-public-label">
+                    <input type="checkbox" name="SharePublic" id="share-public-checkbox" />
+                    Share with public
+                  </label>
+                </div>
                 <label class="public-phone-field">Public Facing Phone Number
                   <input name="PublicPhone" id="public-phone-input" class="phone-mask" placeholder="(615) 555-1234" inputmode="tel" autocomplete="off" />
                 </label>
@@ -306,6 +309,6 @@
     </section>
   </main>
 
-  <script type="module" src="app.js?v=20260902p"></script>
+  <script type="module" src="app.js?v=20260902q"></script>
 </body>
 </html>

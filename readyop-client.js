@@ -15,7 +15,7 @@
 // phone number) can never wipe out the rest of the contact's data.
 // ---------------------------------------------------------------------------
 
-import { CONFIG } from "./config.js?v=20260902p";
+import { CONFIG } from "./config.js?v=20260902q";
 
 function authHeader(creds) {
   return "Basic " + btoa(`${creds.accountId}:${creds.token}`);

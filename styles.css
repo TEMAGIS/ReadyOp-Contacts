@@ -300,6 +300,19 @@ button[type="submit"] { background: var(--accent); color: #fff; border-color: va
 }
 .topbar-buf-row { margin-bottom: 0; }
 .topbar-combo { width: 210px; flex: 0 0 210px; }
+/* .buft (pill buttons) and .combo-input render at noticeably different
+   natural heights — the input's own padding/border added up to several
+   pixels taller than a pill button's — which left the Region and County
+   controls looking like they didn't line up with each other in the
+   header row. Pin both to the same height explicitly instead of leaving
+   it to each element's own padding to (not quite) match. */
+.topbar-filters .buft {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 34px;
+}
+.topbar-filters .combo-input { height: 34px; }
 
 .buf-label {
   font-size: 0.7rem;
@@ -599,15 +612,36 @@ legend {
   background: #eef3fb;
   border-color: var(--tema-blue);
 }
+/* flex-start (not center) — both fields now start with a same-style
+   label line ("Sharing" / "Public Facing Phone Number") above their
+   control, so top-aligning the two columns lines up those label lines
+   with each other, same as any other pair of fields in the form.
+   (Centering them instead — the original approach, before the
+   checkbox got its own "Sharing" title — left the checkbox floating up
+   near the phone field's LABEL rather than level with its INPUT, since
+   the checkbox alone had no label line offsetting it to match.) */
 .public-contact-row {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 0.7rem 1.5rem;
+  align-items: flex-start;
+  gap: 0.7rem 1rem;
 }
+.public-contact-field-title {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-bottom: 0.42rem;
+}
+/* Public Contact is now constrained to a single grid column (about half
+   the form's width — see fieldset.public-contact-fieldset) rather than
+   spanning full-width, so this field's basis/min-width came down too —
+   a "Share with public" (shortened from "Share this contact with
+   Public") + this field need to actually fit side by side in that
+   narrower space instead of wrapping onto a second line. */
+.public-contact-row .public-checkbox-field { flex: 0 1 auto; }
 .public-contact-row .public-phone-field {
-  flex: 1 1 220px;
-  min-width: 200px;
+  flex: 1 1 160px;
+  min-width: 150px;
   margin-bottom: 0;
 }
 /* Bigger touch/click target and a bigger checkbox than the standard

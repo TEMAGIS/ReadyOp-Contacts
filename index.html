@@ -9,7 +9,7 @@
        an old copy cached can keep using it even after you've pushed new
        files, which looks like "my fix isn't showing up." Bump this value
        (e.g. to today's date) any time you redeploy changed CSS/JS. -->
-  <link rel="stylesheet" href="styles.css?v=20260902l" />
+  <link rel="stylesheet" href="styles.css?v=20260902n" />
 </head>
 <body>
   <!-- ════════════════════════════════════════════════════════════
@@ -61,11 +61,38 @@
       </svg>
       <h1>ReadyOp Contacts</h1>
     </div>
+    <!-- Region/County live directly in the header now — this is a desktop
+         app (embedded in an Experience Builder widget, never a phone
+         screen), so there's no need for the mobile-style slide-up
+         "Filter" drawer that used to hide them behind a button. -->
+    <div class="topbar-filters" id="topbar-filters" hidden>
+      <div class="topbar-filter-group">
+        <span class="topbar-filter-label">Region</span>
+        <div class="buf-row topbar-buf-row" id="region-pill-row" role="group" aria-label="Filter by region"></div>
+      </div>
+      <div class="topbar-filter-group">
+        <span class="topbar-filter-label">County</span>
+        <div class="combo topbar-combo" id="county-combo">
+          <input
+            type="text"
+            id="county-input"
+            class="combo-input"
+            placeholder="All counties"
+            autocomplete="off"
+            role="combobox"
+            aria-expanded="false"
+            aria-controls="county-listbox"
+            aria-autocomplete="list"
+            aria-label="Filter by county"
+          />
+          <button type="button" id="county-clear" class="combo-clear" aria-label="Clear county filter" hidden>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+          </button>
+          <ul id="county-listbox" class="combo-listbox" role="listbox" aria-label="Counties" hidden></ul>
+        </div>
+      </div>
+    </div>
     <div class="topbar-right">
-      <button type="button" id="filter-toggle-btn" class="filter-btn topbar-filter-btn" aria-expanded="false" aria-controls="region-drawer" hidden>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
-        Filter
-      </button>
       <span id="user-label"></span>
       <button id="sign-out-btn" hidden>Sign out</button>
     </div>
@@ -96,9 +123,28 @@
         </button>
         <form id="edit-form">
           <!-- Laid out to mirror ReadyOp's own "Modify Contact" dialog:
-               two columns (General Info / Other Information) instead of
-               one long stack. -->
+               two columns (General Info / Address) instead of one long
+               stack, with Public Contact called out as its own full-width
+               section up top. -->
           <div class="form-columns">
+            <!-- Sits first/full-width ("grid-column: 1 / -1" in
+                 styles.css) so it's the first thing seen when opening a
+                 contact — not buried below the other fields — with a
+                 bigger, more clickable checkbox since this gets checked on
+                 a lot of contacts while scrolling through the list. -->
+            <fieldset class="form-col public-contact-fieldset">
+              <legend>Public Contact</legend>
+              <div class="public-contact-row">
+                <label class="checkbox-label public-checkbox" id="share-public-label">
+                  <input type="checkbox" name="SharePublic" id="share-public-checkbox" />
+                  Share this contact with Public
+                </label>
+                <label class="public-phone-field">Public Facing Phone Number
+                  <input name="PublicPhone" id="public-phone-input" class="phone-mask" placeholder="(615) 555-1234" inputmode="tel" autocomplete="off" />
+                </label>
+              </div>
+            </fieldset>
+
             <fieldset class="form-col">
               <legend>General Info</legend>
               <label>First name <input name="First" required maxlength="16" /></label>
@@ -116,41 +162,27 @@
               </div>
               <label>PIN <input name="PIN" /></label>
               <label>County <input name="County" list="county-datalist" placeholder="e.g. Davidson" /></label>
-              <label>Address <input name="Address" /></label>
             </fieldset>
             <datalist id="county-datalist"></datalist>
 
+            <!-- Renamed from "Other Information" — every address-related
+                 field now lives together here, Region first (it's the
+                 broadest/top-level grouping) followed by the street-level
+                 fields, with Address itself moved up from General Info so
+                 nothing address-related is split across two fieldsets. -->
             <fieldset class="form-col">
-              <legend>Other Information</legend>
-              <label>Address 2 <input name="Address2" /></label>
-              <label>City <input name="City" /></label>
-              <label>State <input name="State" maxlength="2" placeholder="TN" /></label>
-              <label>Zip <input name="Zip" /></label>
-              <label>Fax <input name="Fax" /></label>
+              <legend>Address</legend>
               <label>Region
                 <select name="Region" id="edit-region-select">
                   <option value="">—</option>
                 </select>
               </label>
-            </fieldset>
-
-            <!-- Broken out from Other Information into its own full-width
-                 ("grid-column: 1 / -1" in styles.css) section, with a
-                 bigger, more clickable checkbox — this gets checked on a
-                 lot of contacts while scrolling through the list, so it
-                 needs to be easy to spot and easy to click rather than one
-                 line buried among a dozen other fields. -->
-            <fieldset class="form-col public-contact-fieldset">
-              <legend>Public Contact</legend>
-              <div class="public-contact-row">
-                <label class="checkbox-label public-checkbox" id="share-public-label">
-                  <input type="checkbox" name="SharePublic" id="share-public-checkbox" />
-                  Share this contact with Public
-                </label>
-                <label class="public-phone-field">Public Facing Phone Number
-                  <input name="PublicPhone" id="public-phone-input" class="phone-mask" placeholder="(615) 555-1234" inputmode="tel" autocomplete="off" />
-                </label>
-              </div>
+              <label>Address <input name="Address" /></label>
+              <label>Address 2 <input name="Address2" /></label>
+              <label>City <input name="City" /></label>
+              <label>State <input name="State" maxlength="2" placeholder="TN" /></label>
+              <label>Zip <input name="Zip" /></label>
+              <label>Fax <input name="Fax" /></label>
             </fieldset>
 
             <!-- Phones/Emails share this same 2-column grid (instead of
@@ -272,46 +304,6 @@
     </section>
   </main>
 
-  <!-- ════════════════════════════════════════════════════════════
-       REGION FILTER DRAWER
-       Same slide-up drawer / pill-button pattern as the sibling PREDS
-       app's filter drawer, for visual consistency. Region is a
-       single-select (unlike PREDS's multi-select damage-level filter),
-       so picking a pill closes the drawer immediately — same behavior
-       PREDS uses for its own single-select filters (distance, zone).
-       The pill row itself is built in app.js from CONFIG.REGION_OPTIONS.
-       ════════════════════════════════════════════════════════════ -->
-  <div id="region-drawer" aria-hidden="true" inert>
-    <div class="filter-drawer-header">
-      <div class="filter-drawer-title">Filters</div>
-      <button type="button" class="filter-drawer-close" id="region-drawer-close" aria-label="Close filters">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
-      </button>
-    </div>
-    <div class="buf-label">Region</div>
-    <div class="buf-row" id="region-pill-row" role="group" aria-label="Filter by region"></div>
-
-    <div class="buf-label">County</div>
-    <div class="combo" id="county-combo">
-      <input
-        type="text"
-        id="county-input"
-        class="combo-input"
-        placeholder="All counties"
-        autocomplete="off"
-        role="combobox"
-        aria-expanded="false"
-        aria-controls="county-listbox"
-        aria-autocomplete="list"
-        aria-label="Filter by county"
-      />
-      <button type="button" id="county-clear" class="combo-clear" aria-label="Clear county filter" hidden>
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
-      </button>
-      <ul id="county-listbox" class="combo-listbox" role="listbox" aria-label="Counties" hidden></ul>
-    </div>
-  </div>
-
-  <script type="module" src="app.js?v=20260902l"></script>
+  <script type="module" src="app.js?v=20260902n"></script>
 </body>
 </html>

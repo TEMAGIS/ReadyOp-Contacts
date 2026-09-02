@@ -192,6 +192,15 @@ Number) now formats as you type — typing digits produces
 the browser; whatever's shown is exactly what gets sent to ReadyOp on
 save.
 
+The same formatting is also applied when the edit form loads, to
+whatever number is already on file — so a number stored in a different
+shape (e.g. ReadyOp's own `+16153064619`) shows up matching the mask
+too, instead of only newly-typed numbers looking formatted. An 11-digit
+number that starts with a `1` (a US country code) has that leading `1`
+stripped before formatting, so it still comes out as a normal 10-digit
+`(615) 306-4619` instead of shifting every digit over by one. See
+`formatPhoneNumber()` in `app.js`.
+
 ## Save confirmation
 
 The Save button itself briefly turns green and reads "✓ Saved" for about
@@ -221,10 +230,12 @@ front is simpler and faster in practice than re-querying per keystroke.
 
 **Sort order:** ReadyOp's API returns contacts in its own (not
 alphabetical) order. The app re-sorts the filtered list alphabetically by
-displayed name (First + Last, case-insensitive, natural numeric
-ordering) every time the search box, a filter, or the underlying roster
-changes — see `contactDisplayName()`/`applyFilters()` in `app.js`. This
-is purely a client-side convenience; there's no other sort option.
+**Last name** (First name as the tiebreaker when Last matches — e.g. two
+"Smith"s), case-insensitive with natural numeric ordering, every time the
+search box, a filter, or the underlying roster changes — see
+`applyFilters()` in `app.js`. This is purely a client-side convenience;
+there's no other sort option, and the name shown on each row is still
+"First Last" (`contactDisplayName()`) — only the sort key is Last-first.
 
 ## Search
 
@@ -239,40 +250,42 @@ be searchable too.
 
 ## Region / County filters
 
-A "Filter" button lives in the top header bar (to the left of the
-signed-in user's name) and opens a slide-up drawer — same
-filter-button + drawer + pill pattern as the sibling PREDS app, styled
-for the dark topbar background instead of the toolbar-on-white look it
-started with. It has two filters, Region listed first since selecting it
-narrows what County offers (see below):
+Region and County live directly in the top header bar — no "Filter"
+button and no slide-up drawer to open. This app is embedded in an
+Experience Builder widget on a desktop screen, never a phone, so the
+mobile-style hide-behind-a-button pattern (borrowed from the sibling
+PREDS app, which *does* need it for its own phone-sized audience) wasn't
+earning its keep here; the two filters just sit in the header at all
+times instead. Region is listed first since selecting it narrows what
+County offers (see below):
 
-- **Region** (West / Middle / Southeast / East) — pill buttons,
-  single-select; picking one closes the drawer immediately (matching how
-  PREDS's own single-select filters behave).
-- **County** — a dropdown built from whatever distinct values actually
-  appear in the roster's County field (not a hardcoded list), sorted
-  alphabetically. If the source data has inconsistent spellings (e.g.
-  both "Fayette" and "Fayette County" show up in ReadyOp), both appear as
-  separate options rather than being silently merged — only someone who
-  knows the data should decide which spelling is canonical.
+- **Region** (West / Middle / Southeast / East) — pill buttons in the
+  header, single-select.
+- **County** — a combobox in the header built from whatever distinct
+  values actually appear in the roster's County field (not a hardcoded
+  list), sorted alphabetically. If the source data has inconsistent
+  spellings (e.g. both "Fayette" and "Fayette County" show up in
+  ReadyOp), both appear as separate options rather than being silently
+  merged — only someone who knows the data should decide which spelling
+  is canonical.
 
 **Region narrows County:** once a Region is selected, the County
-dropdown only offers counties that actually appear under that Region in
+combobox only offers counties that actually appear under that Region in
 the loaded roster (built from the same roster fetch, in
 `regionToCounties` in `app.js`) — so you can't pick a Region/County
 combination that would silently return zero results. If a County was
 already selected and it doesn't belong to the newly-picked Region, it's
 cleared automatically rather than left active and invisible-broken.
 Clearing Region back to "All regions" restores the full county list.
-This only affects the filter drawer — the edit form's own County field
-(a free-text input, see below) always suggests from the *full* county
-list regardless of the active Region filter, since the contact you're
-editing may belong to a different region than whatever's currently
-selected as a list filter.
+This only affects the header's County filter — the edit form's own
+County field (a free-text input, see below) always suggests from the
+*full* county list regardless of the active Region filter, since the
+contact you're editing may belong to a different region than whatever's
+currently selected as a list filter.
 
-Either filter (or both together) shows a removable chip — "Region: West
-×", "County: Fayette ×" — above the contact list, and lights up the
-Filter button itself while active.
+Either filter (or both together) also shows a removable chip — "Region:
+West ×", "County: Fayette ×" — above the contact list, alongside the
+selected pill/combobox value in the header.
 
 The County field is a type-to-filter combobox rather than a plain
 dropdown — with ~90+ counties in the data, scrolling a native `<select>`
@@ -296,34 +309,46 @@ side as before.
 
 ## Edit form — matching ReadyOp's own Modify Contact layout
 
-The edit form now mirrors ReadyOp's native two-column "General Info" /
-"Other Information" layout instead of one long single-column stack, and
-gained several fields ReadyOp's own dialog shows that weren't editable
-here before: **PIN**, **County**, **Address**, **Address 2**, **City**,
-**State**, **Zip**, **Fax**, and **Region** (as a dropdown, matching the
-same options as the filter pills). See "The edit form's extra fields"
-below for the confirmed field mapping behind each of these.
+The edit form mirrors ReadyOp's native two-column dialog layout instead
+of one long single-column stack, and gained several fields ReadyOp's own
+dialog shows that weren't editable here before: **PIN**, **County**,
+**Address**, **Address 2**, **City**, **State**, **Zip**, **Fax**, and
+**Region** (as a dropdown, matching the same options as the header
+pills). See "The edit form's extra fields" below for the confirmed field
+mapping behind each of these.
 
-Phones and Emails share that same 2-column grid too (General Info, Other
-Information, Phones, Emails — a 2×2 layout in that reading order) rather
-than stacking full-width below the first two, so the whole form fits on
-one screen without scrolling on a typical desktop. Field spacing
-throughout the form is intentionally compact to help that fit. Below
-900px wide, it drops back to a single column (all four sections
+The form reads top to bottom as: **Public Contact** (full-width, see
+below), then **General Info** and **Address** side by side, then
+**Phones** and **Emails** side by side — a 2-column grid that
+auto-flows into that 1 + 2 + 2 layout, rather than one long stack, so the
+whole form fits on one screen without scrolling on a typical desktop.
+Field spacing throughout the form is intentionally compact to help that
+fit. Below 900px wide, it drops back to a single column (all sections
 stacked), since there isn't room for two fieldsets side by side without
 cramming each Phone/Email row's number+type+checkbox trio.
 
-**"Public Contact" is its own full-width section.** The "Share this
-contact with Public" checkbox and Public Facing Phone Number used to be
-the last two fields tucked into Other Information; they're broken out
-into their own titled section (`.public-contact-fieldset`, spanning both
-grid columns so it reads as a full-width banner between Other
-Information and Phones/Emails) with a tinted background so it's easy to
-spot while scrolling through contacts. The checkbox itself is also
-bigger and styled as its own clickable row (a bordered card with a
-larger checkbox, `accent-color: var(--tema-blue)`) rather than a plain
-inline checkbox+label, since this is one that gets checked on a lot of
-contacts in a row and needed a bigger, easier target.
+**"Address" groups every address-related field together, Region on
+top.** This section used to be called "Other Information" and held a mix
+of address fields plus Region; it's renamed to **Address**, and the
+**Address** field itself (previously all the way up in General Info) now
+lives here too, so nothing address-related is split across two
+fieldsets. Within it, the reading order is **Region**, **Address**,
+**Address 2**, **City**, **State**, **Zip**, **Fax** — Region first
+since it's the broadest grouping (which part of the state), then the
+street-level fields.
+
+**"Public Contact" is its own full-width section, and sits first.** The
+"Share this contact with Public" checkbox and Public Facing Phone Number
+used to be the last two fields tucked into Other Information; they're
+broken out into their own titled section (`.public-contact-fieldset`,
+spanning both grid columns so it reads as a full-width banner) with a
+tinted background so it's easy to spot while scrolling through contacts
+— and it's the very first thing in the form now, rather than buried
+below General Info/Address, since it's checked on a lot of contacts in a
+row. The checkbox itself is also bigger and styled as its own clickable
+row (a bordered card with a larger checkbox, `accent-color:
+var(--tema-blue)`) rather than a plain inline checkbox+label, for the
+same reason.
 
 ReadyOp's REST API has no native "Region" or "County" field — in this
 agency's roster, they turned out to be two of ReadyOp's ten generic

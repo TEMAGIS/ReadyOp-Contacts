@@ -1,7 +1,7 @@
-import { CONFIG } from "./config.js?v=20260902l";
-import * as auth from "./arcgis-auth.js?v=20260902l";
-import { getReadyOpCredentials, clearCredentialsCache } from "./credentials.js?v=20260902l";
-import { listContacts, getContact, updateContact } from "./readyop-client.js?v=20260902l";
+import { CONFIG } from "./config.js?v=20260902n";
+import * as auth from "./arcgis-auth.js?v=20260902n";
+import { getReadyOpCredentials, clearCredentialsCache } from "./credentials.js?v=20260902n";
+import { listContacts, getContact, updateContact } from "./readyop-client.js?v=20260902n";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -11,9 +11,7 @@ const userLabel = $("#user-label");
 const statusBar = $("#status-bar");
 const contactList = $("#contact-list");
 const searchInput = $("#search-input");
-const filterToggleBtn = $("#filter-toggle-btn");
-const regionDrawer = $("#region-drawer");
-const regionDrawerClose = $("#region-drawer-close");
+const topbarFilters = $("#topbar-filters");
 const regionPillRow = $("#region-pill-row");
 const countyCombo = $("#county-combo");
 const countyInput = $("#county-input");
@@ -97,9 +95,17 @@ function applyUnmappedFieldGuards() {
   }
 }
 
-/** Formats a phone number as the user types: "(615) 555-1234". Applied to every input with the .phone-mask class (the 5 Phone Number fields plus Public Facing Phone Number) so they all behave the same way. */
+/** Formats a phone number as the user types, and also used to reformat numbers already on file when the edit form loads: "(615) 555-1234". Applied to every input with the .phone-mask class (the 5 Phone Number fields plus Public Facing Phone Number) so they all behave the same way. */
 function formatPhoneNumber(value) {
-  const digits = value.replace(/\D/g, "").slice(0, 10);
+  let digits = value.replace(/\D/g, "");
+  // Some numbers on file carry a leading US country code (e.g. ReadyOp's
+  // own "+16153064619") — strip it so an 11-digit "1XXXXXXXXXX" number
+  // still formats down to the same 10-digit shape as everything else,
+  // instead of shifting every digit over by one and mangling the result.
+  if (digits.length === 11 && digits.startsWith("1")) {
+    digits = digits.slice(1);
+  }
+  digits = digits.slice(0, 10);
   if (digits.length === 0) return "";
   if (digits.length < 4) return `(${digits}`;
   if (digits.length < 7) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
@@ -428,25 +434,7 @@ tagsInput.addEventListener("blur", () => {
   closeTagsListbox();
 });
 
-function toggleRegionDrawer(forceClose = false) {
-  const isOpen = regionDrawer.classList.contains("open");
-  if (forceClose || isOpen) {
-    regionDrawer.classList.remove("open");
-    regionDrawer.setAttribute("aria-hidden", "true");
-    regionDrawer.setAttribute("inert", "");
-    filterToggleBtn.setAttribute("aria-expanded", "false");
-  } else {
-    regionDrawer.classList.add("open");
-    regionDrawer.setAttribute("aria-hidden", "false");
-    regionDrawer.removeAttribute("inert");
-    filterToggleBtn.setAttribute("aria-expanded", "true");
-  }
-}
-
-filterToggleBtn.addEventListener("click", () => toggleRegionDrawer());
-regionDrawerClose.addEventListener("click", () => toggleRegionDrawer(true));
-
-/** Region is single-select, so — like PREDS's own single-select filters (distance, zone) — picking a pill closes the drawer immediately rather than waiting for an explicit close tap. Also narrows the County combobox to that region's counties (see countiesForFilter()) and, if the previously active County isn't one of them, clears it too — otherwise the two filters could silently combine to zero results with no visual explanation. */
+/** Region is single-select. Also narrows the County combobox to that region's counties (see countiesForFilter()) and, if the previously active County isn't one of them, clears it too — otherwise the two filters could silently combine to zero results with no visual explanation. Both filters now live directly in the header (no drawer to open/close — this is a desktop-only app). */
 function setRegion(region) {
   activeRegion = region;
   syncRegionPills();
@@ -460,7 +448,6 @@ function setRegion(region) {
   }
   if (!countyListbox.hidden) renderCountyListbox(countyInput.value);
   updateActiveFiltersBar();
-  toggleRegionDrawer(true);
   applyFilters();
 }
 
@@ -473,7 +460,6 @@ function syncRegionPills() {
 }
 
 function updateActiveFiltersBar() {
-  filterToggleBtn.classList.toggle("has-filter", !!activeRegion || !!activeCounty);
   const chips = [];
   if (activeRegion) chips.push({ kind: "region", label: `Region: ${activeRegion}` });
   if (activeCounty) chips.push({ kind: "county", label: `County: ${activeCounty}` });
@@ -566,7 +552,7 @@ $("#sign-out-btn").addEventListener("click", () => {
   appScreen.hidden = true;
   showSignInScreen();
   $("#sign-out-btn").hidden = true;
-  filterToggleBtn.hidden = true;
+  topbarFilters.hidden = true;
   userLabel.textContent = "";
   setStatus("");
 });
@@ -585,7 +571,7 @@ async function enterApp() {
     })
     .catch(() => {});
   $("#sign-out-btn").hidden = false;
-  filterToggleBtn.hidden = false;
+  topbarFilters.hidden = false;
 
   try {
     await auth.ensureFreshToken();
@@ -697,12 +683,15 @@ function contactDisplayName(c) {
   return [c.First, c.Last].filter(Boolean).join(" ").trim();
 }
 
-/** Re-filters allContacts against the current search/Region/County state, sorts alphabetically by displayed name (First + Last — the app doesn't apply any other sort; this is purely a client-side convenience since ReadyOp's API returns contacts in its own, not-alphabetical order), resets the visible list, and renders the first batch. Call whenever the search box, a filter, or the underlying roster changes. */
+/** Re-filters allContacts against the current search/Region/County state, sorts alphabetically by Last name (First name as the tiebreaker when Last matches, e.g. two "Smith"s) — the app doesn't apply any other sort; this is purely a client-side convenience since ReadyOp's API returns contacts in its own, not-alphabetical order — resets the visible list, and renders the first batch. Call whenever the search box, a filter, or the underlying roster changes. */
 function applyFilters() {
   filteredContacts = allContacts.filter(matchesFilters);
-  filteredContacts.sort((a, b) =>
-    contactDisplayName(a).localeCompare(contactDisplayName(b), undefined, { sensitivity: "base", numeric: true })
-  );
+  filteredContacts.sort((a, b) => {
+    const opts = { sensitivity: "base", numeric: true };
+    const lastCompare = (a.Last || "").localeCompare(b.Last || "", undefined, opts);
+    if (lastCompare !== 0) return lastCompare;
+    return (a.First || "").localeCompare(b.First || "", undefined, opts);
+  });
   renderedCount = 0;
   contactList.innerHTML = "";
   revealMore();
@@ -834,10 +823,14 @@ function populateEditForm(c) {
     editForm.PublicPhone.value = formatPhoneNumber(c[CONFIG.PUBLIC_PHONE_FIELD] || "");
   }
 
+  // Reformats whatever's already on file (e.g. ReadyOp's own
+  // "+16153064619") through the same formatPhoneNumber() used while
+  // typing, so an existing number shows up matching the "(615) 555-1234"
+  // mask instead of raw and inconsistent with freshly-typed ones.
   const phones = c.Phones || [];
   for (let i = 0; i < 5; i++) {
     const p = phones[i] || {};
-    editForm[`Phone_${i}_Number`].value = p.Number || "";
+    editForm[`Phone_${i}_Number`].value = formatPhoneNumber(p.Number || "");
     editForm[`Phone_${i}_Type`].value = p.Type || "";
     editForm[`Phone_${i}_Textable`].checked = !!p.Textable;
   }

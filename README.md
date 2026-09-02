@@ -219,6 +219,13 @@ documented to filter by (see the next section) — neither is expressible
 as a single server-side query. With ~3,000 contacts, fetching once up
 front is simpler and faster in practice than re-querying per keystroke.
 
+**Sort order:** ReadyOp's API returns contacts in its own (not
+alphabetical) order. The app re-sorts the filtered list alphabetically by
+displayed name (First + Last, case-insensitive, natural numeric
+ordering) every time the search box, a filter, or the underlying roster
+changes — see `contactDisplayName()`/`applyFilters()` in `app.js`. This
+is purely a client-side convenience; there's no other sort option.
+
 ## Search
 
 A single search box (matching the sibling PREDS app's own search-bar
@@ -232,9 +239,12 @@ be searchable too.
 
 ## Region / County filters
 
-A "Filter" button above the contact list opens a slide-up drawer — same
-filter-button + drawer + pill pattern as the sibling PREDS app, for
-visual consistency across CUSEC/TEMA apps. It has two filters:
+A "Filter" button lives in the top header bar (to the left of the
+signed-in user's name) and opens a slide-up drawer — same
+filter-button + drawer + pill pattern as the sibling PREDS app, styled
+for the dark topbar background instead of the toolbar-on-white look it
+started with. It has two filters, Region listed first since selecting it
+narrows what County offers (see below):
 
 - **Region** (West / Middle / Southeast / East) — pill buttons,
   single-select; picking one closes the drawer immediately (matching how
@@ -245,6 +255,20 @@ visual consistency across CUSEC/TEMA apps. It has two filters:
   both "Fayette" and "Fayette County" show up in ReadyOp), both appear as
   separate options rather than being silently merged — only someone who
   knows the data should decide which spelling is canonical.
+
+**Region narrows County:** once a Region is selected, the County
+dropdown only offers counties that actually appear under that Region in
+the loaded roster (built from the same roster fetch, in
+`regionToCounties` in `app.js`) — so you can't pick a Region/County
+combination that would silently return zero results. If a County was
+already selected and it doesn't belong to the newly-picked Region, it's
+cleared automatically rather than left active and invisible-broken.
+Clearing Region back to "All regions" restores the full county list.
+This only affects the filter drawer — the edit form's own County field
+(a free-text input, see below) always suggests from the *full* county
+list regardless of the active Region filter, since the contact you're
+editing may belong to a different region than whatever's currently
+selected as a list filter.
 
 Either filter (or both together) shows a removable chip — "Region: West
 ×", "County: Fayette ×" — above the contact list, and lights up the
@@ -288,6 +312,18 @@ throughout the form is intentionally compact to help that fit. Below
 900px wide, it drops back to a single column (all four sections
 stacked), since there isn't room for two fieldsets side by side without
 cramming each Phone/Email row's number+type+checkbox trio.
+
+**"Public Contact" is its own full-width section.** The "Share this
+contact with Public" checkbox and Public Facing Phone Number used to be
+the last two fields tucked into Other Information; they're broken out
+into their own titled section (`.public-contact-fieldset`, spanning both
+grid columns so it reads as a full-width banner between Other
+Information and Phones/Emails) with a tinted background so it's easy to
+spot while scrolling through contacts. The checkbox itself is also
+bigger and styled as its own clickable row (a bordered card with a
+larger checkbox, `accent-color: var(--tema-blue)`) rather than a plain
+inline checkbox+label, since this is one that gets checked on a lot of
+contacts in a row and needed a bigger, easier target.
 
 ReadyOp's REST API has no native "Region" or "County" field — in this
 agency's roster, they turned out to be two of ReadyOp's ten generic

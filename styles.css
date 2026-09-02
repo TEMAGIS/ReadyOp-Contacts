@@ -37,7 +37,7 @@ body {
 .tn-badge-sm { width: 30px; height: 30px; flex-shrink: 0; }
 .topbar h1 { font-size: 1.05rem; margin: 0; color: #fff; font-weight: 700; letter-spacing: -0.2px; }
 
-.topbar-right { display: flex; align-items: center; gap: 0.75rem; font-size: 0.85rem; color: rgba(255, 255, 255, 0.85); }
+.topbar-right { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; row-gap: 0.4rem; gap: 0.75rem; font-size: 0.85rem; color: rgba(255, 255, 255, 0.85); }
 .topbar-right button {
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.35);
@@ -241,17 +241,12 @@ button[type="submit"] { background: var(--accent); color: #fff; border-color: va
 }
 #search-input:focus { border-color: var(--focus); box-shadow: 0 0 0 3px rgba(255, 191, 71, 0.35); }
 
-.list-toolbar {
-  display: flex;
-  padding: 0 0.75rem 0.5rem;
-  border-bottom: 1px solid var(--border);
-  background: #fff;
-}
-
 /* ── Region/County filter button + drawer ─────────────────────────
    Adapted from the sibling PREDS app's filter-button/drawer pattern
    (same tema-blue visual language) for consistency across CUSEC/TEMA
-   apps, rather than plain <select>s inline in the search area. */
+   apps, rather than plain <select>s inline in the search area. Lives in
+   the topbar now (see .topbar-filter-btn below for the dark-background
+   variant), not inline above the list. */
 .filter-btn {
   display: flex;
   align-items: center;
@@ -272,6 +267,21 @@ button[type="submit"] { background: var(--accent); color: #fff; border-color: va
 }
 .filter-btn:hover { border-color: var(--tema-blue); color: var(--tema-blue); }
 .filter-btn.has-filter { background: var(--tema-blue); border-color: var(--tema-blue); color: #fff; }
+
+/* Topbar sits on --tema-blue, so the plain .filter-btn (white card,
+   blue-on-hover) would be invisible there — this variant matches the
+   existing .topbar-right button styling (white-on-transparent) instead,
+   with its own "active filter" state since a blue fill wouldn't show up
+   against the blue topbar background. */
+.topbar-filter-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #fff;
+  min-height: 32px;
+  padding: 0.4rem 0.8rem;
+}
+.topbar-filter-btn:hover { background: rgba(255, 255, 255, 0.22); border-color: #fff; color: #fff; }
+.topbar-filter-btn.has-filter { background: #fff; border-color: #fff; color: var(--tema-blue); }
 
 .active-filters {
   display: flex;
@@ -616,6 +626,55 @@ legend {
    in. */
 #edit-form label.checkbox-label.field-pending { color: #9aa3ad; cursor: not-allowed; }
 #edit-form input:disabled { background: #f1f3f5; color: #9aa3ad; cursor: not-allowed; }
+
+/* ── "Public Contact" section (Share-Public checkbox + Public Phone) ──
+   Broken out of Other Information into its own section (spans both grid
+   columns — see .form-columns' auto-flow) and visually called out with a
+   tinted background/border, since whoever's editing needs to spot and
+   check this on a lot of contacts in a row rather than hunt for one line
+   among a dozen other fields. */
+#edit-form fieldset.public-contact-fieldset {
+  grid-column: 1 / -1;
+  background: #eef3fb;
+  border-color: var(--tema-blue);
+}
+.public-contact-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.7rem 1.5rem;
+}
+.public-contact-row .public-phone-field {
+  flex: 1 1 220px;
+  min-width: 200px;
+  margin-bottom: 0;
+}
+/* Bigger touch/click target and a bigger checkbox than the standard
+   .checkbox-label — this is the one checked most often, over and over,
+   while working through a list of contacts. */
+#edit-form label.checkbox-label.public-checkbox {
+  gap: 0.6rem;
+  padding: 0.55rem 0.85rem;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #1c2126;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+#edit-form label.checkbox-label.public-checkbox:hover { border-color: var(--tema-blue); }
+#edit-form label.checkbox-label.public-checkbox input[type="checkbox"] {
+  width: 19px;
+  height: 19px;
+  accent-color: var(--tema-blue);
+  cursor: pointer;
+}
+#edit-form label.checkbox-label.public-checkbox.field-pending {
+  background: #f1f3f5;
+  border-color: var(--border);
+}
 
 /* ── Tags picker ───────────────────────────────────────────────────
    Type-to-add/select chip picker (multi-select version of the Region

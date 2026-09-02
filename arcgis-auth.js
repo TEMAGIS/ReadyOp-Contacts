@@ -17,7 +17,7 @@
 // CUSEC/TEMA app embedded the same way in Experience Builder.
 // ---------------------------------------------------------------------------
 
-import { CONFIG } from "./config.js?v=20260902j";
+import { CONFIG } from "./config.js?v=20260902l";
 
 const AUTHORIZE_URL = `${CONFIG.ARCGIS_PORTAL_URL}/sharing/rest/oauth2/authorize`;
 const TOKEN_URL = `${CONFIG.ARCGIS_PORTAL_URL}/sharing/rest/oauth2/token`;

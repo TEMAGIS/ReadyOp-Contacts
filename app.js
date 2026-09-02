@@ -1,7 +1,7 @@
-import { CONFIG } from "./config.js?v=20260902j";
-import * as auth from "./arcgis-auth.js?v=20260902j";
-import { getReadyOpCredentials, clearCredentialsCache } from "./credentials.js?v=20260902j";
-import { listContacts, getContact, updateContact } from "./readyop-client.js?v=20260902j";
+import { CONFIG } from "./config.js?v=20260902l";
+import * as auth from "./arcgis-auth.js?v=20260902l";
+import { getReadyOpCredentials, clearCredentialsCache } from "./credentials.js?v=20260902l";
+import { listContacts, getContact, updateContact } from "./readyop-client.js?v=20260902l";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -52,6 +52,7 @@ let rosterLoading = false;
 let hasLoggedSample = false;
 const knownCounties = new Set();
 const knownTags = new Set(); // every distinct tag seen across the roster — used as Tags-picker suggestions when CONFIG.TAG_OPTIONS isn't set
+const regionToCounties = new Map(); // region name (lowercased) -> Set of counties seen under that region in the loaded roster; used to narrow the County filter's options once a Region filter is active
 
 // --- Search + filters ---
 let searchTerm = "";
@@ -154,6 +155,13 @@ function sortedCounties() {
   return [...knownCounties].sort((a, b) => a.localeCompare(b));
 }
 
+/** Counties to offer in the drawer's County FILTER dropdown: every county seen in the loaded roster, normally — but narrowed to just the counties that actually appear under the active Region (if one is set), so picking a Region first doesn't leave County offering choices that would combine to zero results. The edit form's own County field (a free-text input with its own datalist, populated below) always suggests from the *full* list regardless of the active Region filter, since the contact being edited may belong to a different region than whatever's currently selected as a list filter. */
+function countiesForFilter() {
+  if (!activeRegion) return sortedCounties();
+  const set = regionToCounties.get(activeRegion.toLowerCase());
+  return set ? [...set].sort((a, b) => a.localeCompare(b)) : [];
+}
+
 /** Rebuilds the County combobox's known-values list (used to filter the drawer's type-ahead dropdown) and the edit form's County <datalist>, from whatever distinct values have been seen so far in COUNTY_FIELD across the loaded roster (called as more of the roster streams in, and once more when it finishes) — not a hardcoded list, since only the live data can say what's actually there (including any inconsistent spellings). */
 function refreshCountyOptions() {
   const counties = sortedCounties();
@@ -168,7 +176,7 @@ function refreshCountyOptions() {
 /** Renders the county combobox's dropdown list, filtered by `filterText` (case-insensitive substring match against county names) — "All counties" always appears first so clearing the filter is always one click away. */
 function renderCountyListbox(filterText) {
   const term = (filterText || "").trim().toLowerCase();
-  const matches = sortedCounties().filter((c) => !term || c.toLowerCase().includes(term));
+  const matches = countiesForFilter().filter((c) => !term || c.toLowerCase().includes(term));
 
   const rows = [`<li class="combo-option${activeCounty === "" ? " selected" : ""}" role="option" data-value="" aria-selected="${activeCounty === ""}">All counties</li>`];
   if (matches.length === 0 && term) {
@@ -438,10 +446,19 @@ function toggleRegionDrawer(forceClose = false) {
 filterToggleBtn.addEventListener("click", () => toggleRegionDrawer());
 regionDrawerClose.addEventListener("click", () => toggleRegionDrawer(true));
 
-/** Region is single-select, so — like PREDS's own single-select filters (distance, zone) — picking a pill closes the drawer immediately rather than waiting for an explicit close tap. */
+/** Region is single-select, so — like PREDS's own single-select filters (distance, zone) — picking a pill closes the drawer immediately rather than waiting for an explicit close tap. Also narrows the County combobox to that region's counties (see countiesForFilter()) and, if the previously active County isn't one of them, clears it too — otherwise the two filters could silently combine to zero results with no visual explanation. */
 function setRegion(region) {
   activeRegion = region;
   syncRegionPills();
+  if (activeCounty && region) {
+    const pool = regionToCounties.get(region.toLowerCase());
+    if (!pool || !pool.has(activeCounty)) {
+      activeCounty = "";
+      countyInput.value = "";
+      countyClear.hidden = true;
+    }
+  }
+  if (!countyListbox.hidden) renderCountyListbox(countyInput.value);
   updateActiveFiltersBar();
   toggleRegionDrawer(true);
   applyFilters();
@@ -549,6 +566,7 @@ $("#sign-out-btn").addEventListener("click", () => {
   appScreen.hidden = true;
   showSignInScreen();
   $("#sign-out-btn").hidden = true;
+  filterToggleBtn.hidden = true;
   userLabel.textContent = "";
   setStatus("");
 });
@@ -567,6 +585,7 @@ async function enterApp() {
     })
     .catch(() => {});
   $("#sign-out-btn").hidden = false;
+  filterToggleBtn.hidden = false;
 
   try {
     await auth.ensureFreshToken();
@@ -601,6 +620,7 @@ async function loadRoster() {
   allContacts = [];
   knownCounties.clear();
   knownTags.clear();
+  regionToCounties.clear();
   hasLoggedSample = false;
   let page = 0;
   let pages = 1;
@@ -630,7 +650,15 @@ async function loadRoster() {
 
       for (const c of contacts) {
         const county = (c[CONFIG.COUNTY_FIELD] || "").trim();
-        if (county) knownCounties.add(county);
+        const region = (c[CONFIG.REGION_FIELD] || "").trim();
+        if (county) {
+          knownCounties.add(county);
+          if (region) {
+            const key = region.toLowerCase();
+            if (!regionToCounties.has(key)) regionToCounties.set(key, new Set());
+            regionToCounties.get(key).add(county);
+          }
+        }
         (c.Tags || "").split(",").forEach((t) => {
           const tag = t.trim();
           if (tag) knownTags.add(tag);
@@ -665,9 +693,16 @@ function matchesFilters(c) {
   return true;
 }
 
-/** Re-filters allContacts against the current search/Region/County state, resets the visible list, and renders the first batch. Call whenever the search box, a filter, or the underlying roster changes. */
+function contactDisplayName(c) {
+  return [c.First, c.Last].filter(Boolean).join(" ").trim();
+}
+
+/** Re-filters allContacts against the current search/Region/County state, sorts alphabetically by displayed name (First + Last — the app doesn't apply any other sort; this is purely a client-side convenience since ReadyOp's API returns contacts in its own, not-alphabetical order), resets the visible list, and renders the first batch. Call whenever the search box, a filter, or the underlying roster changes. */
 function applyFilters() {
   filteredContacts = allContacts.filter(matchesFilters);
+  filteredContacts.sort((a, b) =>
+    contactDisplayName(a).localeCompare(contactDisplayName(b), undefined, { sensitivity: "base", numeric: true })
+  );
   renderedCount = 0;
   contactList.innerHTML = "";
   revealMore();
@@ -709,7 +744,7 @@ function appendContactRows(contacts) {
     const li = document.createElement("li");
     li.className = "contact-row";
     li.dataset.contactId = c["Contact ID"];
-    const name = [c.First, c.Last].filter(Boolean).join(" ") || "(no name)";
+    const name = contactDisplayName(c) || "(no name)";
     const sub = [c.Organization, c.Title].filter(Boolean).join(" — ");
     li.innerHTML = `<div class="name">${escapeHtml(name)}</div><div class="sub">${escapeHtml(sub)}</div>`;
     li.addEventListener("click", () => selectContact(c["Contact ID"]));
@@ -898,7 +933,7 @@ editForm.addEventListener("submit", async (e) => {
 function updateContactRowText(contactId, fields) {
   const row = contactList.querySelector(`.contact-row[data-contact-id="${CSS.escape(String(contactId))}"]`);
   if (!row) return;
-  const name = [fields.First, fields.Last].filter(Boolean).join(" ") || "(no name)";
+  const name = contactDisplayName(fields) || "(no name)";
   const sub = [fields.Organization, fields.Title].filter(Boolean).join(" — ");
   row.querySelector(".name").textContent = name;
   row.querySelector(".sub").textContent = sub;

@@ -9,7 +9,7 @@
        an old copy cached can keep using it even after you've pushed new
        files, which looks like "my fix isn't showing up." Bump this value
        (e.g. to today's date) any time you redeploy changed CSS/JS. -->
-  <link rel="stylesheet" href="styles.css?v=20260902j" />
+  <link rel="stylesheet" href="styles.css?v=20260902l" />
 </head>
 <body>
   <!-- ════════════════════════════════════════════════════════════
@@ -62,6 +62,10 @@
       <h1>ReadyOp Contacts</h1>
     </div>
     <div class="topbar-right">
+      <button type="button" id="filter-toggle-btn" class="filter-btn topbar-filter-btn" aria-expanded="false" aria-controls="region-drawer" hidden>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+        Filter
+      </button>
       <span id="user-label"></span>
       <button id="sign-out-btn" hidden>Sign out</button>
     </div>
@@ -75,12 +79,6 @@
         <label for="search-input" class="sr-only">Search contacts</label>
         <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         <input id="search-input" type="search" placeholder="Search by name, organization, county, tags…" autocomplete="off" aria-label="Search contacts" />
-      </div>
-      <div class="list-toolbar">
-        <button type="button" id="filter-toggle-btn" class="filter-btn" aria-expanded="false" aria-controls="region-drawer">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
-          Filter
-        </button>
       </div>
       <div class="active-filters" id="active-filters" aria-label="Active filters" aria-live="polite"></div>
       <ul id="contact-list"></ul>
@@ -134,13 +132,25 @@
                   <option value="">—</option>
                 </select>
               </label>
-              <label class="checkbox-label" id="share-public-label">
-                <input type="checkbox" name="SharePublic" id="share-public-checkbox" />
-                Share this contact with Public
-              </label>
-              <label>Public Facing Phone Number
-                <input name="PublicPhone" id="public-phone-input" class="phone-mask" placeholder="(615) 555-1234" inputmode="tel" autocomplete="off" />
-              </label>
+            </fieldset>
+
+            <!-- Broken out from Other Information into its own full-width
+                 ("grid-column: 1 / -1" in styles.css) section, with a
+                 bigger, more clickable checkbox — this gets checked on a
+                 lot of contacts while scrolling through the list, so it
+                 needs to be easy to spot and easy to click rather than one
+                 line buried among a dozen other fields. -->
+            <fieldset class="form-col public-contact-fieldset">
+              <legend>Public Contact</legend>
+              <div class="public-contact-row">
+                <label class="checkbox-label public-checkbox" id="share-public-label">
+                  <input type="checkbox" name="SharePublic" id="share-public-checkbox" />
+                  Share this contact with Public
+                </label>
+                <label class="public-phone-field">Public Facing Phone Number
+                  <input name="PublicPhone" id="public-phone-input" class="phone-mask" placeholder="(615) 555-1234" inputmode="tel" autocomplete="off" />
+                </label>
+              </div>
             </fieldset>
 
             <!-- Phones/Emails share this same 2-column grid (instead of
@@ -302,6 +312,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=20260902j"></script>
+  <script type="module" src="app.js?v=20260902l"></script>
 </body>
 </html>

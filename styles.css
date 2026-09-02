@@ -163,6 +163,12 @@ button[type="submit"] { background: var(--accent); color: #fff; border-color: va
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /* Without this, a grid item's default min-width:auto lets its content
+     (the search form's inputs) force this column wider than the
+     minmax(260px,340px) track, spilling into/under the edit pane next to
+     it — this is what caused "Last name"/"Tags" to run under the right
+     panel. */
+  min-width: 0;
 }
 
 .search-form {
@@ -173,20 +179,26 @@ button[type="submit"] { background: var(--accent); color: #fff; border-color: va
   border-bottom: 1px solid var(--border);
   background: #fff;
 }
-.search-form input {
+.search-form input,
+.search-form select {
   grid-column: span 1;
+  min-width: 0;
   padding: 0.5rem 0.6rem;
   border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 0.88rem;
   font-family: inherit;
+  background: #fff;
+  color: #1c2126;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-.search-form input:focus {
+.search-form input:focus,
+.search-form select:focus {
   outline: none;
   border-color: var(--tema-blue);
   box-shadow: 0 0 0 3px rgba(0, 40, 104, 0.12);
 }
+.search-form select#region-filter { grid-column: span 2; }
 .search-form button[type="submit"] {
   grid-column: span 2;
   margin-top: 0.15rem;
@@ -264,6 +276,11 @@ button[type="submit"] { background: var(--accent); color: #fff; border-color: va
 .edit-pane { padding: 1.5rem; overflow-y: auto; background: var(--bg-subtle); }
 #edit-empty-state { color: var(--text-muted); }
 
+/* Cap the edit form's width so fieldsets don't balloon into oversized
+   blocks on wide screens — the form reads better as a column than as a
+   full-bleed sheet. */
+#edit-form { max-width: 640px; }
+
 fieldset {
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -312,8 +329,10 @@ legend {
   gap: 0.5rem;
   align-items: center;
   margin-bottom: 0.5rem;
+  min-width: 0;
 }
-.repeat-row .checkbox { display: flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; color: var(--text-muted); }
+.repeat-row input, .repeat-row select { min-width: 0; }
+.repeat-row .checkbox { display: flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }
 .repeat-row .checkbox input { width: auto; }
 
 .form-actions { display: flex; justify-content: flex-end; }

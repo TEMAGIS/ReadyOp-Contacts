@@ -138,12 +138,10 @@ keep that.
 - **Create / delete contact** — the app only lists and edits existing
   contacts, per what was asked for. ReadyOp's docs describe Create/Delete
   endpoints too, so this is a natural next step if you want it.
-- **Custom_1–10 fields** — the API client and edit form don't surface these
-  yet since I don't know what you're using them for. Easy to add once you
-  tell me which custom columns matter.
-- **Region filter (West / Middle / Southeast / East)** — requested, but
-  blocked on knowing which ReadyOp field actually holds the region value.
-  See "Finding the region field" below.
+- **Other custom fields** — the API client and edit form only surface
+  Region (see below). Other `Custom_N` slots (e.g. County, address,
+  city/state/zip, fax — visible in your agency's Roster columns) aren't
+  in the edit form yet. Easy to add if you want them editable here too.
 
 ## List behavior: infinite scroll
 
@@ -152,26 +150,25 @@ loads the next page as you scroll near the bottom of the list; a "Load
 more" button is also always available as a fallback for anyone who'd
 rather click than scroll. This replaced the earlier Prev/Next pager.
 
-## Finding the region field
+## Region filter
 
-ReadyOp's documented Contact schema has no built-in "county" or "region"
-field — organizations that use those typically store them in one of the
-generic `Custom_1` through `Custom_10` fields. To find out which one (if
-any) your ReadyOp setup uses:
+The search form includes a Region dropdown (West / Middle / Southeast /
+East). ReadyOp's REST API has no native "Region" field or a documented
+way to filter by one server-side — in this agency's roster, Region turned
+out to be one of ReadyOp's ten generic custom columns, exposed by the API
+as the JSON field `"Custom 8"` (confirmed from a live API response; see
+`CONFIG.REGION_FIELD` in `config.js`). Because there's no confirmed
+server-side filter parameter for it, selecting a Region scans the whole
+roster (or the whole result of any First/Last/Organization/Tags filters
+also set) page by page and keeps only the matches — this is a few
+requests behind the scenes (in batches of `CONFIG.REGION_SCAN_PAGE_SIZE`,
+well under ReadyOp's documented 10,000-row cap) rather than one instant
+query. Matching is case-insensitive, so a "southeast" value in the data
+still matches the "Southeast" option.
 
-1. Open the deployed app and sign in.
-2. Open the browser's DevTools (F12, or right-click → Inspect) and go to
-   the **Console** tab.
-3. The app logs the first loaded contact's full raw record and its field
-   names there automatically (look for lines starting
-   `[ReadyOp Contacts]`).
-4. Check whether a `Custom_N` field (or any other field) holds a
-   West/Middle/Southeast/East-style value.
-
-Once you report back the field name (and the exact value strings ReadyOp
-uses for each region), the Region filter can be wired up as a dropdown or
-button group in the search form, filtering server-side via that
-`Custom_N` parameter on the Contacts search endpoint.
+If your agency ever renumbers or relabels its custom fields (Menu →
+Access → Manage Access → Agencies → double-click the agency → Modify
+Agency), update `REGION_FIELD` in `config.js` to match.
 
 ## Testing without touching production data
 

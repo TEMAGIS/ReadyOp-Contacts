@@ -11,6 +11,7 @@ const userLabel = $("#user-label");
 const statusBar = $("#status-bar");
 const contactList = $("#contact-list");
 const searchForm = $("#search-form");
+const regionFilterSelect = $("#region-filter");
 const pagerInfo = $("#pager-info");
 const loadMoreBtn = $("#load-more-btn");
 const editPanel = $("#edit-panel");
@@ -30,6 +31,15 @@ let totalResults = 0;
 let loadedCount = 0;
 let isLoadingMore = false;
 let hasLoggedSample = false;
+let regionScanActive = false; // true while a Region filter's full-roster scan is in progress or holding results
+let loadGeneration = 0; // bumped on every resetAndLoadList so a stale in-flight fetch (e.g. the user changed filters again before it finished) can detect it's been superseded and quietly stop instead of corrupting the newer results
+
+for (const region of CONFIG.REGION_OPTIONS) {
+  const opt = document.createElement("option");
+  opt.value = region;
+  opt.textContent = region;
+  regionFilterSelect.appendChild(opt);
+}
 
 function setStatus(message, isError = false) {
   statusBar.textContent = message || "";
@@ -127,29 +137,102 @@ async function enterApp() {
   await resetAndLoadList();
 }
 
-function currentFilters() {
+/** Text-search fields ReadyOp's API actually supports as query params — excludes Region, which isn't a real API field (see loadRegionFiltered). */
+function currentTextFilters() {
   const data = new FormData(searchForm);
   const filters = {};
   for (const [key, value] of data.entries()) {
+    if (key === "Region") continue;
     if (value) filters[key] = value;
   }
   return filters;
 }
 
+function currentRegionFilter() {
+  return (regionFilterSelect.value || "").trim();
+}
+
 /** Clears the list and loads the first page — call on initial load or when the search filters change. */
 async function resetAndLoadList() {
+  const myGeneration = ++loadGeneration;
   nextPageToLoad = 0;
   totalPages = 1;
   totalResults = 0;
   loadedCount = 0;
+  regionScanActive = false;
   contactList.innerHTML = "";
   updateListFooter();
-  await loadMoreContacts();
+
+  const region = currentRegionFilter();
+  if (region) {
+    await loadRegionFiltered(region, myGeneration);
+  } else {
+    await loadMoreContacts(myGeneration);
+  }
 }
 
-/** Fetches the next page of the current filtered search and appends it to the list. Safe to call repeatedly (e.g. from a scroll handler) — no-ops while a load is already in flight or no pages remain. */
-async function loadMoreContacts() {
-  if (isLoadingMore || nextPageToLoad >= totalPages) return;
+/**
+ * ReadyOp's search API has no "Region" query parameter — Region lives in
+ * a generic custom field (CONFIG.REGION_FIELD) that isn't documented as
+ * filterable server-side. So a Region filter instead scans the whole
+ * (optionally text-filtered) result set page by page and keeps only the
+ * contacts whose REGION_FIELD matches, case-insensitively. Unlike the
+ * normal infinite-scroll list, this loads everything up front — the
+ * "Load more" control stays hidden throughout.
+ */
+async function loadRegionFiltered(region, generation) {
+  regionScanActive = true;
+  isLoadingMore = true;
+  loadMoreBtn.hidden = true;
+  const textFilters = currentTextFilters();
+  const wantedRegion = region.toLowerCase();
+  let page = 0;
+  let pages = 1;
+  let scanned = 0;
+  let matched = 0;
+  try {
+    do {
+      if (generation !== loadGeneration) return; // superseded by a newer search — stop quietly
+      pagerInfo.textContent = `Scanning for "${region}"… ${matched} match${matched === 1 ? "" : "es"} so far (${scanned} contacts checked)`;
+      setStatus(`Scanning contacts for Region "${region}"…`);
+      const result = await listContacts(creds, {
+        page,
+        pageSize: CONFIG.REGION_SCAN_PAGE_SIZE,
+        filters: textFilters,
+      });
+      if (generation !== loadGeneration) return; // superseded while this page was in flight
+      const contacts = result.Contacts || [];
+      pages = result.Pages ?? 1;
+      scanned += contacts.length;
+      const pageMatches = contacts.filter(
+        (c) => (c[CONFIG.REGION_FIELD] || "").trim().toLowerCase() === wantedRegion
+      );
+      matched += pageMatches.length;
+      loadedCount = matched;
+      totalResults = matched;
+      appendContactRows(pageMatches);
+      page++;
+    } while (page < pages);
+    if (generation === loadGeneration) setStatus("");
+  } catch (err) {
+    if (generation === loadGeneration) setStatus(`Failed to load contacts: ${err.message}`, true);
+  } finally {
+    if (generation === loadGeneration) {
+      isLoadingMore = false;
+      pagerInfo.textContent =
+        loadedCount === 0
+          ? `No contacts found for Region "${region}".`
+          : `${loadedCount} contact${loadedCount === 1 ? "" : "s"} in Region "${region}"`;
+      if (loadedCount === 0) contactList.innerHTML = `<li class="empty">No contacts match your search.</li>`;
+      loadMoreBtn.hidden = true;
+    }
+  }
+}
+
+/** Fetches the next page of the current filtered search and appends it to the list. Safe to call repeatedly (e.g. from a scroll handler) — no-ops while a load is already in flight, no pages remain, or a Region scan is active (see loadRegionFiltered). */
+async function loadMoreContacts(generation = loadGeneration) {
+  if (isLoadingMore || nextPageToLoad >= totalPages || regionScanActive) return;
+  if (generation !== loadGeneration) return;
   isLoadingMore = true;
   loadMoreBtn.disabled = true;
   setStatus("Loading contacts…");
@@ -157,15 +240,16 @@ async function loadMoreContacts() {
     const result = await listContacts(creds, {
       page: nextPageToLoad,
       pageSize: CONFIG.PAGE_SIZE,
-      filters: currentFilters(),
+      filters: currentTextFilters(),
     });
+    if (generation !== loadGeneration) return; // superseded while this page was in flight
+
     const contacts = result.Contacts || [];
 
     // One-time diagnostic: dump the first contact's full raw record and
-    // field names to the console. Open DevTools (F12) → Console to see
-    // exactly what ReadyOp returns — useful for confirming which
-    // Custom_1–10 field (if any) holds county/region data before wiring
-    // up a region filter against it.
+    // field names to the console. Open DevTools (F12) → Console to
+    // inspect any other custom field ReadyOp returns (e.g. County, which
+    // this build doesn't filter on yet — see CONFIG.COUNTY_FIELD).
     if (!hasLoggedSample && contacts.length) {
       hasLoggedSample = true;
       console.info("[ReadyOp Contacts] sample raw contact record:", contacts[0]);
@@ -177,12 +261,17 @@ async function loadMoreContacts() {
     nextPageToLoad = (result.Page ?? nextPageToLoad) + 1;
     loadedCount += contacts.length;
     appendContactRows(contacts);
+    if (contactList.children.length === 0) {
+      contactList.innerHTML = `<li class="empty">No contacts match your search.</li>`;
+    }
     setStatus("");
   } catch (err) {
-    setStatus(`Failed to load contacts: ${err.message}`, true);
+    if (generation === loadGeneration) setStatus(`Failed to load contacts: ${err.message}`, true);
   } finally {
-    isLoadingMore = false;
-    updateListFooter();
+    if (generation === loadGeneration) {
+      isLoadingMore = false;
+      updateListFooter();
+    }
   }
 }
 
@@ -198,11 +287,8 @@ function updateListFooter() {
   loadMoreBtn.textContent = isLoadingMore ? "Loading…" : "Load more";
 }
 
+/** Appends rows for the given contacts. Doesn't render an "empty" state itself — callers check contactList.children.length once they know no more results are coming (a mid-scan empty page isn't necessarily the final state; see loadRegionFiltered). */
 function appendContactRows(contacts) {
-  if (contactList.children.length === 0 && contacts.length === 0) {
-    contactList.innerHTML = `<li class="empty">No contacts match your search.</li>`;
-    return;
-  }
   for (const c of contacts) {
     const li = document.createElement("li");
     li.className = "contact-row";
@@ -220,6 +306,10 @@ searchForm.addEventListener("submit", (e) => {
   e.preventDefault();
   resetAndLoadList();
 });
+
+// Re-run the search as soon as a Region is picked, rather than making the
+// user also click Search.
+regionFilterSelect.addEventListener("change", () => resetAndLoadList());
 
 loadMoreBtn.addEventListener("click", () => loadMoreContacts());
 

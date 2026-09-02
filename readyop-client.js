@@ -15,7 +15,7 @@
 // phone number) can never wipe out the rest of the contact's data.
 // ---------------------------------------------------------------------------
 
-import { CONFIG } from "./config.js?v=20260902s";
+import { CONFIG } from "./config.js?v=20260902t";
 
 function authHeader(creds) {
   return "Basic " + btoa(`${creds.accountId}:${creds.token}`);
@@ -25,7 +25,7 @@ function contactsUrl(pathSuffix = "") {
   return `${CONFIG.READYOP_API_BASE_URL}/api/2013-12-01/Contacts/${CONFIG.READYOP_AGENCY_ID}${pathSuffix}`;
 }
 
-async function parseResponse(res) {
+async function parseResponse(res, requestContext) {
   const text = await res.text();
   let body;
   try {
@@ -34,8 +34,27 @@ async function parseResponse(res) {
     body = { raw: text };
   }
   if (!res.ok) {
-    const detail = body.Detail || body.raw || res.statusText;
-    throw new Error(`ReadyOp API error (HTTP ${res.status}): ${detail}`);
+    // ReadyOp's own top-level message (e.g. "One or more request parameters
+    // are missing or invalid.") rarely names which field it means. Some of
+    // its endpoints include a more specific breakdown under other keys
+    // (seen in the wild: Message, Errors, ModelState, error_description) --
+    // surface whichever of those exist too, and always dump the full raw
+    // body + the request we sent to the console so a 400 can actually be
+    // debugged from DevTools instead of just the one-line status message.
+    const specifics = [body.Detail, body.Message, body.error_description]
+      .filter(Boolean)
+      .join(" ");
+    const nested = body.Errors || body.ModelState || body.errors;
+    const detail = specifics || body.raw || res.statusText || "(no detail returned)";
+    console.error("ReadyOp API error", {
+      status: res.status,
+      url: res.url,
+      requestBody: requestContext,
+      responseBody: body,
+      nestedErrors: nested,
+    });
+    const nestedSuffix = nested ? ` -- see console for field-level detail` : "";
+    throw new Error(`ReadyOp API error (HTTP ${res.status}): ${detail}${nestedSuffix}`);
   }
   return body;
 }
@@ -74,7 +93,13 @@ export async function getContact(creds, contactId) {
  *   "Phone_0_Textable", "Email_0_Address", "Email_0_Type", Custom_1, ... }
  */
 export async function updateContact(creds, contactId, fields) {
-  const body = new URLSearchParams({ ...fields, Update_Mode: "Present" });
+  const fullFields = { ...fields, Update_Mode: "Present" };
+  const body = new URLSearchParams(fullFields);
+  // Log what we're about to send *before* the request fires, not just on
+  // failure -- if the tab crashes/reloads mid-save this still lands in the
+  // console history, and it lets you diff a working save against a failing
+  // one side by side.
+  console.log("ReadyOp updateContact request", { contactId, fields: fullFields });
   const res = await fetch(contactsUrl(`/${contactId}`), {
     method: "POST",
     headers: {
@@ -83,7 +108,7 @@ export async function updateContact(creds, contactId, fields) {
     },
     body,
   });
-  return parseResponse(res);
+  return parseResponse(res, fullFields);
 }
 
 // --- Helpers to convert between ReadyOp's array-shaped API responses and

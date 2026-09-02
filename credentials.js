@@ -6,7 +6,7 @@
 // or any file.
 // ---------------------------------------------------------------------------
 
-import { CONFIG } from "./config.js?v=20260902s";
+import { CONFIG } from "./config.js?v=20260902t";
 
 let cached = null;
 

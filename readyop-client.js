@@ -15,7 +15,7 @@
 // phone number) can never wipe out the rest of the contact's data.
 // ---------------------------------------------------------------------------
 
-import { CONFIG } from "./config.js?v=20260902t";
+import { CONFIG } from "./config.js?v=20260902u";
 
 function authHeader(creds) {
   return "Basic " + btoa(`${creds.accountId}:${creds.token}`);
@@ -23,6 +23,21 @@ function authHeader(creds) {
 
 function contactsUrl(pathSuffix = "") {
   return `${CONFIG.READYOP_API_BASE_URL}/api/2013-12-01/Contacts/${CONFIG.READYOP_AGENCY_ID}${pathSuffix}`;
+}
+
+// ReadyOp exposes its ten generic custom columns as "Custom 0".."Custom 20"
+// (a space) in GET/search responses -- that's what CONFIG.COUNTY_FIELD,
+// REGION_FIELD, ADDRESS_FIELD, SHARE_PUBLIC_FIELD, etc. in config.js are set
+// to, since that's what the rest of the app reads and filters against. But
+// the Modify (write) endpoint doesn't recognize that space-separated name --
+// it silently rejects the whole request with a generic "One or more request
+// parameters are missing or invalid." (no field-level detail) if any
+// "Custom N" key is present. It wants an underscore instead: "Custom_N".
+// Rather than keep two different names for the same field throughout the
+// app, convert at this one boundary, right before a write goes out.
+function toWriteFieldName(name) {
+  const m = /^Custom (\d+)$/.exec(name);
+  return m ? `Custom_${m[1]}` : name;
 }
 
 async function parseResponse(res, requestContext) {
@@ -93,7 +108,10 @@ export async function getContact(creds, contactId) {
  *   "Phone_0_Textable", "Email_0_Address", "Email_0_Type", Custom_1, ... }
  */
 export async function updateContact(creds, contactId, fields) {
-  const fullFields = { ...fields, Update_Mode: "Present" };
+  const fullFields = { Update_Mode: "Present" };
+  for (const [key, value] of Object.entries(fields)) {
+    fullFields[toWriteFieldName(key)] = value;
+  }
   const body = new URLSearchParams(fullFields);
   // Log what we're about to send *before* the request fires, not just on
   // failure -- if the tab crashes/reloads mid-save this still lands in the

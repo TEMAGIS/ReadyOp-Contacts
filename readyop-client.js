@@ -18,7 +18,7 @@
 // phone number) can never wipe out the rest of the contact's data.
 // ---------------------------------------------------------------------------
 
-import { CONFIG } from "./config.js?v=20260902w";
+import { CONFIG } from "./config.js?v=20260902x";
 
 function authHeader(creds) {
   return "Basic " + btoa(`${creds.accountId}:${creds.token}`);
@@ -41,6 +41,23 @@ function contactsUrl(pathSuffix = "") {
 function toWriteFieldName(name) {
   const m = /^Custom (\d+)$/.exec(name);
   return m ? `Custom_${m[1]}` : name;
+}
+
+// ReadyOp's Modify endpoint also requires Phone_N_Number values in E.164
+// form -- a "+" prefix plus country code, e.g. "+16153064619" (see
+// Phone_0_Number in the docs: "Should be prefixed with a plus... and
+// should include the country code"). But the edit form's phone-mask
+// inputs deliberately show/store numbers as "(615) 555-1234" for
+// readability (see formatPhoneNumber() in app.js), and that display value
+// is what ends up in `fields` here. Convert back to E.164 at this same
+// write boundary, assuming a US number when no country code is already
+// present -- every number in this app is a US contact's.
+function toE164Phone(value) {
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return value;
+  if (digits.length === 10) return `+1${digits}`;
+  if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  return `+${digits}`;
 }
 
 async function parseResponse(res, requestContext) {
@@ -113,7 +130,8 @@ export async function getContact(creds, contactId) {
 export async function updateContact(creds, contactId, fields) {
   const fullFields = { Update: "Present" };
   for (const [key, value] of Object.entries(fields)) {
-    fullFields[toWriteFieldName(key)] = value;
+    const writeKey = toWriteFieldName(key);
+    fullFields[writeKey] = /^Phone_\d+_Number$/.test(writeKey) ? toE164Phone(value) : value;
   }
   const body = new URLSearchParams(fullFields);
   // Log what we're about to send *before* the request fires, not just on

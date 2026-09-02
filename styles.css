@@ -543,7 +543,12 @@ legend {
 .repeat-row .checkbox { display: flex; align-items: center; gap: 0.35rem; font-size: 0.78rem; color: var(--text-muted); white-space: nowrap; }
 .repeat-row .checkbox input { width: auto; }
 
-.form-actions { display: flex; justify-content: flex-end; }
+/* Sits as a grid item now (paired with Public Contact in the top row of
+   .form-columns — see there and the fieldset.public-contact-fieldset
+   rule below), rather than after the whole form — so it stretches to
+   that row's height by default grid behavior; align-items centers the
+   button within it instead of pinning it to the top. */
+.form-actions { display: flex; align-items: center; justify-content: flex-end; }
 .form-actions button[type="submit"] {
   background: var(--tema-blue);
   border-color: var(--tema-blue);
@@ -584,13 +589,13 @@ legend {
 #edit-form input:disabled { background: #f1f3f5; color: #9aa3ad; cursor: not-allowed; }
 
 /* ── "Public Contact" section (Share-Public checkbox + Public Phone) ──
-   Broken out of Other Information into its own section (spans both grid
-   columns — see .form-columns' auto-flow) and visually called out with a
-   tinted background/border, since whoever's editing needs to spot and
-   check this on a lot of contacts in a row rather than hunt for one line
-   among a dozen other fields. */
+   Broken out of Other Information into its own section, constrained to
+   the top-left cell of .form-columns' 2-column grid (Save changes sits
+   beside it in the top-right cell — see .form-actions above) and
+   visually called out with a tinted background/border, since whoever's
+   editing needs to spot and check this on a lot of contacts in a row
+   rather than hunt for one line among a dozen other fields. */
 #edit-form fieldset.public-contact-fieldset {
-  grid-column: 1 / -1;
   background: #eef3fb;
   border-color: var(--tema-blue);
 }

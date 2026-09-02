@@ -317,14 +317,15 @@ dialog shows that weren't editable here before: **PIN**, **County**,
 pills). See "The edit form's extra fields" below for the confirmed field
 mapping behind each of these.
 
-The form reads top to bottom as: **Public Contact** (full-width, see
-below), then **General Info** and **Address** side by side, then
-**Phones** and **Emails** side by side — a 2-column grid that
-auto-flows into that 1 + 2 + 2 layout, rather than one long stack, so the
-whole form fits on one screen without scrolling on a typical desktop.
-Field spacing throughout the form is intentionally compact to help that
-fit. Below 900px wide, it drops back to a single column (all sections
-stacked), since there isn't room for two fieldsets side by side without
+The form reads top to bottom as: **Public Contact** paired with the
+**Save changes** button (top-left/top-right, see below), then **General
+Info** and **Address** side by side, then **Phones** and **Emails** side
+by side — a 2-column grid that auto-flows into that 3-row layout, rather
+than one long stack, so the whole form fits on one screen without
+scrolling on a typical desktop. Field spacing throughout the form is
+intentionally compact to help that fit. Below 900px wide, it drops back
+to a single column (all sections stacked, in that same top-to-bottom
+order), since there isn't room for two fieldsets side by side without
 cramming each Phone/Email row's number+type+checkbox trio.
 
 **"Address" groups every address-related field together, Region on
@@ -337,16 +338,21 @@ fieldsets. Within it, the reading order is **Region**, **Address**,
 since it's the broadest grouping (which part of the state), then the
 street-level fields.
 
-**"Public Contact" is its own full-width section, and sits first.** The
-"Share this contact with Public" checkbox and Public Facing Phone Number
-used to be the last two fields tucked into Other Information; they're
-broken out into their own titled section (`.public-contact-fieldset`,
-spanning both grid columns so it reads as a full-width banner) with a
-tinted background so it's easy to spot while scrolling through contacts
-— and it's the very first thing in the form now, rather than buried
-below General Info/Address, since it's checked on a lot of contacts in a
-row. The checkbox itself is also bigger and styled as its own clickable
-row (a bordered card with a larger checkbox, `accent-color:
+**"Public Contact" sits first, in its own top-left section, with Save
+changes beside it.** The "Share this contact with Public" checkbox and
+Public Facing Phone Number used to be the last two fields tucked into
+Other Information; they're broken out into their own titled section
+(`.public-contact-fieldset`) with a tinted background so it's easy to
+spot while scrolling through contacts — and it's the first thing in the
+form now, rather than buried below General Info/Address, since it's
+checked on a lot of contacts in a row. It briefly spanned the full width
+of the form; it's now constrained to just the top-left grid cell instead,
+with the **Save changes** button moved up out of its old spot below
+every other field and into the top-right cell beside it — so the field
+you check most often and the button you click to save it are both
+visible together, without scrolling past General Info/Address/Phones/
+Emails first. The checkbox itself is also bigger and styled as its own
+clickable row (a bordered card with a larger checkbox, `accent-color:
 var(--tema-blue)`) rather than a plain inline checkbox+label, for the
 same reason.
 

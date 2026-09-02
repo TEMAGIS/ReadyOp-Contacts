@@ -9,7 +9,7 @@
        an old copy cached can keep using it even after you've pushed new
        files, which looks like "my fix isn't showing up." Bump this value
        (e.g. to today's date) any time you redeploy changed CSS/JS. -->
-  <link rel="stylesheet" href="styles.css?v=20260902o" />
+  <link rel="stylesheet" href="styles.css?v=20260902p" />
 </head>
 <body>
   <!-- ════════════════════════════════════════════════════════════
@@ -123,15 +123,17 @@
         </button>
         <form id="edit-form">
           <!-- Laid out to mirror ReadyOp's own "Modify Contact" dialog:
-               two columns (General Info / Address) instead of one long
-               stack, with Public Contact called out as its own full-width
-               section up top. -->
+               two columns instead of one long stack. Public Contact and
+               Save changes pair up in the top row, then General Info /
+               Address, then Phones / Emails. -->
           <div class="form-columns">
-            <!-- Sits first/full-width ("grid-column: 1 / -1" in
-                 styles.css) so it's the first thing seen when opening a
-                 contact — not buried below the other fields — with a
-                 bigger, more clickable checkbox since this gets checked on
-                 a lot of contacts while scrolling through the list. -->
+            <!-- Sits first, constrained to the top-left grid cell (not
+                 full-width — see styles.css) so it's the first thing seen
+                 when opening a contact — not buried below the other
+                 fields — with a bigger, more clickable checkbox since this
+                 gets checked on a lot of contacts while scrolling through
+                 the list. Save changes sits beside it in the top-right
+                 cell, so both are visible together without scrolling. -->
             <fieldset class="form-col public-contact-fieldset">
               <legend>Public Contact</legend>
               <div class="public-contact-row">
@@ -144,6 +146,10 @@
                 </label>
               </div>
             </fieldset>
+
+            <div class="form-actions">
+              <button type="submit">Save changes</button>
+            </div>
 
             <fieldset class="form-col">
               <legend>General Info</legend>
@@ -295,15 +301,11 @@
             </div>
           </fieldset>
           </div>
-
-          <div class="form-actions">
-            <button type="submit">Save changes</button>
-          </div>
         </form>
       </div>
     </section>
   </main>
 
-  <script type="module" src="app.js?v=20260902o"></script>
+  <script type="module" src="app.js?v=20260902p"></script>
 </body>
 </html>

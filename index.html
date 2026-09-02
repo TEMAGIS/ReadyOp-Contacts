@@ -9,7 +9,7 @@
        an old copy cached can keep using it even after you've pushed new
        files, which looks like "my fix isn't showing up." Bump this value
        (e.g. to today's date) any time you redeploy changed CSS/JS. -->
-  <link rel="stylesheet" href="styles.css?v=20260902g" />
+  <link rel="stylesheet" href="styles.css?v=20260902h" />
 </head>
 <body>
   <!-- ════════════════════════════════════════════════════════════
@@ -134,9 +134,11 @@
                 <input name="PublicPhone" id="public-phone-input" class="phone-mask" placeholder="(615) 555-1234" inputmode="tel" autocomplete="off" />
               </label>
             </fieldset>
-          </div>
 
-          <fieldset>
+            <!-- Phones/Emails share this same 2-column grid (instead of
+                 stacking full-width below it) so the whole form fits in
+                 view on a typical desktop without scrolling. -->
+            <fieldset class="form-col">
             <legend>Phones</legend>
             <div class="repeat-group" id="phones-group">
               <div class="repeat-row" data-index="0">
@@ -202,7 +204,7 @@
             </div>
           </fieldset>
 
-          <fieldset>
+          <fieldset class="form-col">
             <legend>Emails</legend>
             <div class="repeat-group" id="emails-group">
               <div class="repeat-row" data-index="0">
@@ -242,6 +244,7 @@
               </div>
             </div>
           </fieldset>
+          </div>
 
           <div class="form-actions">
             <button type="submit">Save changes</button>
@@ -291,6 +294,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=20260902g"></script>
+  <script type="module" src="app.js?v=20260902h"></script>
 </body>
 </html>

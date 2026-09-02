@@ -262,7 +262,15 @@ here before: **PIN**, **County**, **Address**, **Address 2**, **City**,
 **State**, **Zip**, **Fax**, and **Region** (as a dropdown, matching the
 same options as the filter pills). See "The edit form's extra fields"
 below for the confirmed field mapping behind each of these.
-Phones and Emails keep their existing layout beneath the two columns.
+
+Phones and Emails share that same 2-column grid too (General Info, Other
+Information, Phones, Emails — a 2×2 layout in that reading order) rather
+than stacking full-width below the first two, so the whole form fits on
+one screen without scrolling on a typical desktop. Field spacing
+throughout the form is intentionally compact to help that fit. Below
+900px wide, it drops back to a single column (all four sections
+stacked), since there isn't room for two fieldsets side by side without
+cramming each Phone/Email row's number+type+checkbox trio.
 
 ReadyOp's REST API has no native "Region" or "County" field — in this
 agency's roster, they turned out to be two of ReadyOp's ten generic

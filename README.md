@@ -124,14 +124,20 @@ Add an **Embed** widget (or equivalent iframe-based widget) pointed at
 inside that iframe via a popup, make sure the browser isn't blocking popups
 for the Experience Builder domain.
 
-## The ReadyOp `Update_Mode` gotcha
+## The ReadyOp `Update` gotcha
 
-ReadyOp's Modify Contact endpoint defaults to `Update_Mode=All`, which
+ReadyOp's Modify Contact endpoint defaults to `Update=All`, which
 **clears any field you don't include in the request** — editing just a
 phone number would silently wipe the contact's email addresses, tags, etc.
-`readyop-client.js` always sends `Update_Mode=Present` instead, which only
+`readyop-client.js` always sends `Update=Present` instead, which only
 touches fields actually included in the request. If you extend the client,
 keep that.
+
+(This parameter's real name is `Update`, per ReadyOp's own API docs at
+readyop.com/document/modify-a-contact/ — an earlier version of this file
+called it `Update_Mode`, a name ReadyOp doesn't recognize, which made
+every save fail with a generic 400 regardless of what else was in the
+request.)
 
 ## What's not built yet
 

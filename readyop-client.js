@@ -7,15 +7,18 @@
 //   GET  /api/2013-12-01/Contacts/{AgencyID}/{ContactID} (get one)
 //   POST /api/2013-12-01/Contacts/{AgencyID}/{ContactID} (modify)
 //
-// IMPORTANT — ReadyOp's Modify endpoint has an "Update_Mode" parameter:
+// IMPORTANT — ReadyOp's Modify endpoint has an "Update" parameter (NOT
+// "Update_Mode" -- that was this file's original name for it and ReadyOp
+// doesn't recognize it, which silently made every save fail; see ReadyOp's
+// own docs at readyop.com/document/modify-a-contact/):
 //   "All"     (default) replaces the whole record and CLEARS any field you
 //             don't include in the request.
 //   "Present" only touches the fields you actually send.
-// This client always sends Update_Mode=Present so a small edit (say, one
+// This client always sends Update=Present so a small edit (say, one
 // phone number) can never wipe out the rest of the contact's data.
 // ---------------------------------------------------------------------------
 
-import { CONFIG } from "./config.js?v=20260902v";
+import { CONFIG } from "./config.js?v=20260902w";
 
 function authHeader(creds) {
   return "Basic " + btoa(`${creds.accountId}:${creds.token}`);
@@ -108,7 +111,7 @@ export async function getContact(creds, contactId) {
  *   "Phone_0_Textable", "Email_0_Address", "Email_0_Type", Custom_1, ... }
  */
 export async function updateContact(creds, contactId, fields) {
-  const fullFields = { Update_Mode: "Present" };
+  const fullFields = { Update: "Present" };
   for (const [key, value] of Object.entries(fields)) {
     fullFields[toWriteFieldName(key)] = value;
   }

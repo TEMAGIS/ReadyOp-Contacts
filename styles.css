@@ -422,6 +422,7 @@ button[type="submit"] { background: var(--accent); color: #fff; border-color: va
 .combo-option.highlighted { background: var(--bg-subtle); }
 .combo-option.selected { color: var(--tema-blue); font-weight: 700; }
 .combo-option-empty { padding: 0.6rem; font-size: 0.8rem; color: var(--text-muted); cursor: default; }
+.combo-option-add { color: var(--tema-blue); font-weight: 700; }
 
 #contact-list {
   list-style: none;
@@ -615,3 +616,68 @@ legend {
    in. */
 #edit-form label.checkbox-label.field-pending { color: #9aa3ad; cursor: not-allowed; }
 #edit-form input:disabled { background: #f1f3f5; color: #9aa3ad; cursor: not-allowed; }
+
+/* ── Tags picker ───────────────────────────────────────────────────
+   Type-to-add/select chip picker (multi-select version of the Region
+   pills), replacing a raw comma-separated text box. Reuses the same
+   .combo-listbox/.combo-option dropdown pattern the County filter's
+   combobox uses (see there), just in the edit form's light theme
+   instead of the drawer's dark blue. */
+#edit-form .field-group { margin-bottom: 0.42rem; }
+#edit-form .field-group > label { margin-bottom: 0.2rem; }
+.tag-input {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  width: 100%;
+  margin-top: 0.2rem;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.tag-input:focus-within {
+  border-color: var(--tema-blue);
+  box-shadow: 0 0 0 3px rgba(0, 40, 104, 0.12);
+}
+.tag-chips { display: contents; }
+.tag-chip {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--tema-blue);
+  color: #fff;
+  border-radius: 12px;
+  padding: 2px 6px 2px 9px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.tag-chip-remove {
+  background: none;
+  border: none;
+  color: #fff;
+  opacity: 0.8;
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 0.85rem;
+  line-height: 1;
+}
+.tag-chip-remove:hover { opacity: 1; }
+/* Overrides the generic #edit-form input rule — this input sits inline
+   inside .tag-input's own bordered box, so it shouldn't draw a second
+   border/box of its own. */
+#edit-form .tag-input input#tags-input {
+  flex: 1 1 90px;
+  min-width: 90px;
+  width: auto;
+  margin: 0;
+  padding: 3px 2px;
+  border: none;
+  font-size: 0.85rem;
+}
+#edit-form .tag-input input#tags-input:focus { outline: none; box-shadow: none; }
+.tags-listbox { top: calc(100% + 4px); }

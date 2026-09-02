@@ -155,17 +155,34 @@ All confirmed: **County** (`Custom 1`), **Address** (`Custom 2`),
 (`Custom 8`) — matched against the agency's own field mapping. **PIN** is
 a genuine top-level API field.
 
-**"Share this contact with Public"** (a checkbox, sending `"Yes"` when
-checked and blank when not — matching ReadyOp's own "Yes or leave blank"
-convention) and **"Public Facing Phone Number"** (a masked phone input,
-same as the Phone Numbers section) are both on the form now, but stay
-**greyed out and disabled** until their `Custom N` field is known — there
-was no confirmed mapping for either as of this build, and writing to the
-wrong slot would silently overwrite whatever else lives there for a
-contact. Set `SHARE_PUBLIC_FIELD` / `PUBLIC_PHONE_FIELD` in `config.js`
-once you have the real field name (the same way you got the other 8) and
-the fields enable themselves automatically — no other code changes
-needed.
+**"Share this contact with Public"** (`Custom 9`, a checkbox — sends
+`"Yes"` when checked and blank when not, matching ReadyOp's own "Yes or
+leave blank" convention) and **"Public Facing Phone Number"**
+(`Custom 10`, a masked phone input, same as the Phone Numbers section)
+are both confirmed and enabled now too — found via the agency's Contact
+Fields admin screen (Menu → Access → Manage Access → Agencies → agency →
+Contact Fields tab), which lists every Custom field's real name
+directly. Worth knowing about for next time a field mapping needs
+tracking down.
+
+## Tags picker
+
+The Tags field on the edit form is a type-to-add/select chip picker now,
+not a raw comma-separated text box — type to search, pick from a
+dropdown or press Enter to add, click a chip's × to remove, Backspace in
+an empty box removes the last one, and pasting/typing a comma-separated
+string (`"Middle NAWAS, Middle PSAP"`) still works and splits into
+separate chips like before.
+
+By default (`CONFIG.TAG_OPTIONS: []` in `config.js`) it's *suggestions,
+not a hard constraint*: the dropdown offers every tag already seen
+somewhere in the loaded roster, but typing something new and pressing
+Enter (or picking the "Add "..."" row) still creates it. Fill in
+`TAG_OPTIONS` with a fixed list once you've settled on a canonical set of
+tags, and it switches to strictly constraining input to only those
+values — typing something not on the list won't let it be added. Same
+one-line-config-change pattern as `SHARE_PUBLIC_FIELD`/
+`PUBLIC_PHONE_FIELD` above.
 
 ## Phone number formatting
 

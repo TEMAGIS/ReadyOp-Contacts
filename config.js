@@ -101,18 +101,12 @@ export const CONFIG = {
   STATE_FIELD: "Custom 5",
   ZIP_FIELD: "Custom 6",
   FAX_FIELD: "Custom 7",
-  // "Share this contact with Public" and "Public Facing Phone Number"
-  // (seen in ReadyOp's New Contact dialog) still don't have an identified
-  // field — not in the confirmed mapping above either. They DO show on
-  // the edit form now (checkbox + masked phone input), but stay disabled
-  // there — greyed out with a tooltip — until these are set to a real
-  // "Custom N" field name. Once you know it (check the console
-  // diagnostic dump for a contact known to have one of these set, and
-  // compare which Custom slot holds it — or ask whoever gave you the
-  // other 8), set it here and the field enables itself automatically,
-  // no other code changes needed.
-  SHARE_PUBLIC_FIELD: null,
-  PUBLIC_PHONE_FIELD: null,
+  // CONFIRMED (2026-09-02) from the agency's own Contact Fields admin
+  // screen (Menu → Access → Manage Access → Agencies → agency → Contact
+  // Fields tab): Custom 9 = "Share this contact with Public (Yes or
+  // leave blank)", Custom 10 = "Public Facing Phone Number".
+  SHARE_PUBLIC_FIELD: "Custom 9",
+  PUBLIC_PHONE_FIELD: "Custom 10",
   // The County filter's options are NOT hardcoded — they're derived from
   // whatever distinct values actually appear in COUNTY_FIELD across the
   // loaded roster, sorted alphabetically. That also means inconsistent
@@ -120,6 +114,22 @@ export const CONFIG = {
   // "Fayette County" as two entries, if the roster has both) — this
   // isn't normalized/guessed at, since only someone who knows the data
   // can say which spelling is canonical.
+
+  // --- Tags picker (edit form) ---
+  // The Tags field is a type-to-add/select chip picker (like the Region
+  // pills, but multi-select), not a raw comma-separated text box.
+  //
+  // TAG_OPTIONS — leave as [] (the default) to let anyone type any tag,
+  // with suggestions drawn from whatever tags actually already appear
+  // across the loaded roster (grows automatically as new tags get used —
+  // same "derive from live data" approach the County filter uses). Fill
+  // this in with a fixed list (e.g. ["Middle NAWAS", "Middle PSAP", ...])
+  // once you've decided on a canonical set of tags, and the picker
+  // switches to STRICTLY constraining input to only those values —
+  // typing something not on the list won't let it be added. This mirrors
+  // the SHARE_PUBLIC_FIELD/PUBLIC_PHONE_FIELD pattern: ships usable now,
+  // tightens up with a one-line config change whenever you're ready.
+  TAG_OPTIONS: [],
 
   // --- Free-text search ---
   // The single search box matches (case-insensitive substring) against

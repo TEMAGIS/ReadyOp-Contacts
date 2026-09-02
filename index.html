@@ -9,7 +9,7 @@
        an old copy cached can keep using it even after you've pushed new
        files, which looks like "my fix isn't showing up." Bump this value
        (e.g. to today's date) any time you redeploy changed CSS/JS. -->
-  <link rel="stylesheet" href="styles.css?v=20260902h" />
+  <link rel="stylesheet" href="styles.css?v=20260902j" />
 </head>
 <body>
   <!-- ════════════════════════════════════════════════════════════
@@ -107,7 +107,15 @@
               <label>Last name <input name="Last" /></label>
               <label>Organization <input name="Organization" /></label>
               <label>Title <input name="Title" /></label>
-              <label>Tags <input name="Tags" placeholder="comma-separated" /></label>
+              <div class="field-group">
+                <label for="tags-input">Tags</label>
+                <div class="tag-input" id="tags-field">
+                  <div class="tag-chips" id="tags-chips"></div>
+                  <input type="text" id="tags-input" placeholder="Type to add a tag…" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="tags-listbox" aria-autocomplete="list" />
+                  <ul id="tags-listbox" class="combo-listbox tags-listbox" role="listbox" aria-label="Available tags" hidden></ul>
+                </div>
+                <input type="hidden" name="Tags" id="tags-hidden" />
+              </div>
               <label>PIN <input name="PIN" /></label>
               <label>County <input name="County" list="county-datalist" placeholder="e.g. Davidson" /></label>
               <label>Address <input name="Address" /></label>
@@ -294,6 +302,6 @@
     </div>
   </div>
 
-  <script type="module" src="app.js?v=20260902h"></script>
+  <script type="module" src="app.js?v=20260902j"></script>
 </body>
 </html>

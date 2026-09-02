@@ -1,7 +1,7 @@
-import { CONFIG } from "./config.js?v=20260902h";
-import * as auth from "./arcgis-auth.js?v=20260902h";
-import { getReadyOpCredentials, clearCredentialsCache } from "./credentials.js?v=20260902h";
-import { listContacts, getContact, updateContact } from "./readyop-client.js?v=20260902h";
+import { CONFIG } from "./config.js?v=20260902j";
+import * as auth from "./arcgis-auth.js?v=20260902j";
+import { getReadyOpCredentials, clearCredentialsCache } from "./credentials.js?v=20260902j";
+import { listContacts, getContact, updateContact } from "./readyop-client.js?v=20260902j";
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -24,6 +24,11 @@ const editRegionSelect = $("#edit-region-select");
 const sharePublicCheckbox = $("#share-public-checkbox");
 const sharePublicLabel = $("#share-public-label");
 const publicPhoneInput = $("#public-phone-input");
+const tagsField = $("#tags-field");
+const tagsChips = $("#tags-chips");
+const tagsInput = $("#tags-input");
+const tagsListbox = $("#tags-listbox");
+const tagsHidden = $("#tags-hidden");
 const saveBtn = $('#edit-form button[type="submit"]');
 const activeFiltersBar = $("#active-filters");
 const pagerInfo = $("#pager-info");
@@ -46,12 +51,15 @@ let allContacts = [];
 let rosterLoading = false;
 let hasLoggedSample = false;
 const knownCounties = new Set();
+const knownTags = new Set(); // every distinct tag seen across the roster — used as Tags-picker suggestions when CONFIG.TAG_OPTIONS isn't set
 
 // --- Search + filters ---
 let searchTerm = "";
 let activeRegion = ""; // "" = no Region filter
 let activeCounty = ""; // "" = no County filter
 let countyHighlightIndex = -1; // keyboard nav position in the open county combobox listbox
+let currentTags = []; // the open contact's tags, as an ordered array (mirrors the tagsHidden input's comma-joined value)
+let tagHighlightIndex = -1; // keyboard nav position in the open tags listbox
 
 // --- Rendering (reveals more of the already-filtered array as the user scrolls) ---
 let filteredContacts = [];
@@ -242,6 +250,176 @@ document.addEventListener("click", (e) => {
   if (!countyCombo.contains(e.target)) closeCountyListbox();
 });
 
+// ── Tags picker (edit form) ──────────────────────────────────────────
+// Type-to-add/select chip picker — a multi-select sibling of the County
+// combobox above. See CONFIG.TAG_OPTIONS in config.js: unset (default)
+// means "suggest from whatever tags already exist in the roster, but
+// allow typing a brand new one"; set to a fixed list means "constrain
+// strictly to these values only."
+
+function sortedKnownTags() {
+  return [...knownTags].sort((a, b) => a.localeCompare(b));
+}
+
+function isTagsConstrained() {
+  return CONFIG.TAG_OPTIONS.length > 0;
+}
+
+/** Redraws the selected-tags chip row from `currentTags` and keeps the hidden `Tags` form field (a plain comma-joined string, same shape ReadyOp's API already expects) in sync — no submit-handler changes needed elsewhere. */
+function renderTagChips() {
+  tagsChips.innerHTML = currentTags
+    .map(
+      (t) =>
+        `<span class="tag-chip">${escapeHtml(t)}<button type="button" class="tag-chip-remove" data-tag="${escapeHtml(t)}" aria-label="Remove tag ${escapeHtml(t)}">×</button></span>`
+    )
+    .join("");
+  tagsHidden.value = currentTags.join(", ");
+}
+
+/** Renders the tags listbox filtered by `filterText`, excluding tags already selected. Unconstrained mode also offers an "Add "<text>"" row for a typed value that doesn't match an existing option, so a genuinely new tag can still be created. */
+function renderTagsListbox(filterText) {
+  const constrained = isTagsConstrained();
+  const pool = constrained ? CONFIG.TAG_OPTIONS : sortedKnownTags();
+  const typed = (filterText || "").trim();
+  const term = typed.toLowerCase();
+  const selectedLower = new Set(currentTags.map((t) => t.toLowerCase()));
+  const matches = pool.filter((t) => !selectedLower.has(t.toLowerCase()) && (!term || t.toLowerCase().includes(term)));
+
+  const rows = matches.map(
+    (t) => `<li class="combo-option" role="option" data-value="${escapeHtml(t)}">${escapeHtml(t)}</li>`
+  );
+
+  const exactExists = pool.some((t) => t.toLowerCase() === term);
+  if (!constrained && typed && !exactExists) {
+    rows.push(
+      `<li class="combo-option combo-option-add" role="option" data-value="${escapeHtml(typed)}">Add "${escapeHtml(typed)}"</li>`
+    );
+  }
+
+  if (rows.length === 0) {
+    const emptyMessage = constrained
+      ? typed
+        ? `No tags match "${escapeHtml(typed)}"`
+        : "All available tags are already added"
+      : "Type to add a new tag";
+    rows.push(`<li class="combo-option-empty">${emptyMessage}</li>`);
+  }
+
+  tagsListbox.innerHTML = rows.join("");
+  tagsListbox.hidden = false;
+  tagsInput.setAttribute("aria-expanded", "true");
+  tagHighlightIndex = -1;
+}
+
+function closeTagsListbox() {
+  tagsListbox.hidden = true;
+  tagsInput.setAttribute("aria-expanded", "false");
+  tagHighlightIndex = -1;
+}
+
+function highlightTagOption(index) {
+  const options = [...tagsListbox.querySelectorAll(".combo-option[data-value]")];
+  options.forEach((el) => el.classList.remove("highlighted"));
+  if (index >= 0 && index < options.length) {
+    options[index].classList.add("highlighted");
+    options[index].scrollIntoView({ block: "nearest" });
+  }
+  tagHighlightIndex = index;
+}
+
+/** Adds `raw` as a tag if it's non-empty, not already selected, and (when constrained) actually on CONFIG.TAG_OPTIONS. Returns whether it was added, so callers know whether to clear the input. */
+function tryAddTag(raw) {
+  const typed = (raw || "").trim();
+  if (!typed) return false;
+  let value = typed;
+  if (isTagsConstrained()) {
+    const match = CONFIG.TAG_OPTIONS.find((t) => t.toLowerCase() === typed.toLowerCase());
+    if (!match) return false; // not on the allowed list — refuse rather than silently letting anything through
+    value = match;
+  }
+  if (currentTags.some((t) => t.toLowerCase() === value.toLowerCase())) return false; // already added
+  currentTags.push(value);
+  knownTags.add(value);
+  renderTagChips();
+  return true;
+}
+
+function removeTag(tag) {
+  currentTags = currentTags.filter((t) => t !== tag);
+  renderTagChips();
+}
+
+tagsChips.addEventListener("click", (e) => {
+  const btn = e.target.closest(".tag-chip-remove");
+  if (!btn) return;
+  removeTag(btn.dataset.tag);
+});
+
+tagsInput.addEventListener("focus", () => renderTagsListbox(tagsInput.value));
+tagsInput.addEventListener("input", () => {
+  // A comma commits everything typed before it as a tag — supports both
+  // fast comma-separated typing (matching the old plain-text field's
+  // habit) and pasting a whole "Tag A, Tag B, Tag C" string at once.
+  if (tagsInput.value.includes(",")) {
+    const parts = tagsInput.value.split(",");
+    const remainder = parts.pop();
+    parts.forEach((p) => tryAddTag(p));
+    tagsInput.value = remainder;
+  }
+  renderTagsListbox(tagsInput.value);
+});
+tagsInput.addEventListener("keydown", (e) => {
+  const options = [...tagsListbox.querySelectorAll(".combo-option[data-value]")];
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    if (tagsListbox.hidden) renderTagsListbox(tagsInput.value);
+    else highlightTagOption(Math.min(tagHighlightIndex + 1, options.length - 1));
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    highlightTagOption(Math.max(tagHighlightIndex - 1, 0));
+  } else if (e.key === "Enter") {
+    e.preventDefault();
+    const picked =
+      !tagsListbox.hidden && tagHighlightIndex >= 0 && options[tagHighlightIndex]
+        ? tryAddTag(options[tagHighlightIndex].dataset.value)
+        : tryAddTag(tagsInput.value);
+    if (picked) {
+      tagsInput.value = "";
+      renderTagsListbox("");
+    }
+  } else if (e.key === "Backspace" && tagsInput.value === "" && currentTags.length) {
+    // Empty box + Backspace removes the most recently added chip — the
+    // usual multi-select tag-input convention.
+    removeTag(currentTags[currentTags.length - 1]);
+  } else if (e.key === "Escape") {
+    closeTagsListbox();
+  }
+});
+tagsListbox.addEventListener("mousedown", (e) => {
+  // Keep focus on the text input through the click (instead of losing it
+  // to the <li>) so the blur handler below doesn't race the click and
+  // hide the listbox before the click can register.
+  e.preventDefault();
+});
+tagsListbox.addEventListener("click", (e) => {
+  const opt = e.target.closest(".combo-option[data-value]");
+  if (!opt) return;
+  if (tryAddTag(opt.dataset.value)) {
+    tagsInput.value = "";
+    renderTagsListbox("");
+  }
+});
+tagsInput.addEventListener("blur", () => {
+  // Commit whatever's still typed (but not yet confirmed with
+  // Enter/comma) rather than silently discarding it if the user clicks
+  // straight to Save.
+  if (tagsInput.value.trim()) {
+    tryAddTag(tagsInput.value);
+    tagsInput.value = "";
+  }
+  closeTagsListbox();
+});
+
 function toggleRegionDrawer(forceClose = false) {
   const isOpen = regionDrawer.classList.contains("open");
   if (forceClose || isOpen) {
@@ -422,6 +600,7 @@ async function loadRoster() {
   rosterLoading = true;
   allContacts = [];
   knownCounties.clear();
+  knownTags.clear();
   hasLoggedSample = false;
   let page = 0;
   let pages = 1;
@@ -452,6 +631,10 @@ async function loadRoster() {
       for (const c of contacts) {
         const county = (c[CONFIG.COUNTY_FIELD] || "").trim();
         if (county) knownCounties.add(county);
+        (c.Tags || "").split(",").forEach((t) => {
+          const tag = t.trim();
+          if (tag) knownTags.add(tag);
+        });
       }
       allContacts.push(...contacts);
       refreshCountyOptions();
@@ -587,7 +770,10 @@ function populateEditForm(c) {
   editForm.Last.value = c.Last || "";
   editForm.Organization.value = c.Organization || "";
   editForm.Title.value = c.Title || "";
-  editForm.Tags.value = c.Tags || "";
+  currentTags = (c.Tags || "").split(",").map((t) => t.trim()).filter(Boolean);
+  tagsInput.value = "";
+  closeTagsListbox();
+  renderTagChips();
   editForm.PIN.value = c.PIN || "";
   editForm.County.value = c[CONFIG.COUNTY_FIELD] || "";
   editForm.Address.value = c[CONFIG.ADDRESS_FIELD] || "";

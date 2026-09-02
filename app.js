@@ -17,6 +17,9 @@ const nextPageBtn = $("#next-page");
 const editPanel = $("#edit-panel");
 const editForm = $("#edit-form");
 const editEmptyState = $("#edit-empty-state");
+const loginError = $("#login-error");
+const oauthFallback = $("#oauth-fallback");
+const oauthSignInBtn = $("#sign-in-btn");
 
 let creds = null;
 let currentPage = 0;
@@ -29,22 +32,63 @@ function setStatus(message, isError = false) {
   statusBar.hidden = !message;
 }
 
+function setLoginError(message) {
+  if (!loginError) return;
+  loginError.textContent = message || "";
+  loginError.classList.toggle("visible", !!message);
+}
+
 async function boot() {
-  const existing = await auth.checkExistingSignIn();
-  if (existing) {
+  let result;
+  try {
+    result = await auth.boot();
+  } catch (err) {
+    // A redirect (standalone flow) came back with an error, or failed to
+    // exchange — show it on the sign-in screen rather than silently
+    // proceeding signed-out.
+    signInScreen.hidden = false;
+    showSignInScreen();
+    setLoginError(err.message);
+    return;
+  }
+  if (result === "popup") return; // this page instance is the popup; it's closing itself
+
+  if (auth.isSignedIn()) {
     await enterApp();
   } else {
-    signInScreen.hidden = false;
+    showSignInScreen();
   }
 }
 
-$("#sign-in-btn").addEventListener("click", async () => {
+function showSignInScreen() {
+  signInScreen.hidden = false;
+  // Pre-build the authorize URL so the "didn't open?" fallback link is a
+  // real <a href> the moment it's needed — anchor clicks with
+  // target="_blank" are exempt from popup blockers, unlike a window.open()
+  // called after an async step.
+  auth
+    .prepareAuthUrl()
+    .then((url) => {
+      if (oauthFallback) {
+        oauthFallback.href = url;
+        oauthFallback.hidden = false;
+      }
+    })
+    .catch((err) => console.warn("Could not pre-build ArcGIS auth URL:", err));
+}
+
+oauthSignInBtn.addEventListener("click", async () => {
   try {
-    setStatus("Signing in…");
-    await auth.signIn();
+    setLoginError("");
+    oauthSignInBtn.disabled = true;
+    await auth.startSignIn();
+    // Standalone flow navigates away and never reaches here. Popup flow
+    // resolves once sign-in completes.
     await enterApp();
   } catch (err) {
-    setStatus(`Sign-in failed: ${err.message}`, true);
+    setLoginError(err.message);
+  } finally {
+    oauthSignInBtn.disabled = false;
   }
 });
 
@@ -53,7 +97,7 @@ $("#sign-out-btn").addEventListener("click", () => {
   clearCredentialsCache();
   creds = null;
   appScreen.hidden = true;
-  signInScreen.hidden = false;
+  showSignInScreen();
   $("#sign-out-btn").hidden = true;
   userLabel.textContent = "";
   setStatus("");
@@ -62,11 +106,11 @@ $("#sign-out-btn").addEventListener("click", () => {
 async function enterApp() {
   signInScreen.hidden = true;
   setStatus("Loading your account…");
-  const user = await auth.getUserInfo();
-  userLabel.textContent = user ? user.fullName || user.username : "Signed in";
+  userLabel.textContent = auth.getUsername() || "Signed in";
   $("#sign-out-btn").hidden = false;
 
   try {
+    await auth.ensureFreshToken();
     creds = await getReadyOpCredentials(auth.getToken());
   } catch (err) {
     setStatus(`Could not load ReadyOp credentials: ${err.message}`, true);

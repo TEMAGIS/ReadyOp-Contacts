@@ -4,6 +4,14 @@
   --accent: #1a6ee0;
   --danger: #c62828;
   --bg-subtle: #f6f8fa;
+  /* TN/TEMA brand colors — matches the login screen used across other
+     CUSEC/TEMA apps (e.g. the PREDS damage-assessment app) for visual
+     consistency. */
+  --tema-blue: #002868;
+  --tema-red: #bf0a30;
+  --focus: #ffbf47;
+  --radius-sm: 8px;
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.14);
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   color-scheme: light;
 }
@@ -35,13 +43,92 @@ body {
 }
 #status-bar.error { background: #fdecea; color: var(--danger); }
 
-.centered {
+/* ── Login screen ─────────────────────────────────────────── */
+#sign-in-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  background: linear-gradient(165deg, var(--tema-blue) 0%, #00193f 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  padding-top: max(24px, env(safe-area-inset-top));
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+}
+#sign-in-screen[hidden] { display: none; }
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 18px;
+  padding: 28px 24px 22px;
+  box-shadow: var(--shadow-lg);
+}
+.login-brand {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1rem;
-  padding: 4rem 1rem;
+  gap: 12px;
+  margin-bottom: 18px;
 }
+.login-brand .tn-badge { width: 56px; height: 56px; }
+.login-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f1117;
+  text-align: center;
+  letter-spacing: -0.3px;
+}
+.login-sub {
+  font-size: 13px;
+  color: #444c5c;
+  text-align: center;
+  line-height: 1.4;
+  max-width: 340px;
+  margin-top: 4px;
+}
+.login-btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--tema-blue);
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  min-height: 48px;
+  transition: opacity 0.15s, transform 0.05s;
+}
+.login-btn:hover { opacity: 0.92; }
+.login-btn:active { transform: scale(0.99); }
+.login-btn:disabled { opacity: 0.55; cursor: wait; }
+.login-btn-oauth { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.login-error {
+  background: #fde8ea;
+  border: 1px solid #f5c2c7;
+  color: #842029;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  line-height: 1.4;
+  display: none;
+  margin-bottom: 12px;
+}
+.login-error.visible { display: block; }
+.login-meta-link {
+  display: block;
+  text-align: center;
+  font-size: 12px;
+  color: #4f5665;
+  margin-top: 10px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
 
 button {
   cursor: pointer;

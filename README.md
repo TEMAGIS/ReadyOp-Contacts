@@ -6,9 +6,15 @@ in an ArcGIS Online Experience Builder experience.
 
 ## How it works
 
-1. The user signs in with their ArcGIS account (OAuth popup). This is what
-   Experience Builder access control gates — only people you've granted
-   access to the app item can get this far.
+1. The user signs in with their ArcGIS account — OAuth 2.0
+   authorization-code flow with PKCE, implemented directly against ArcGIS
+   Online's REST endpoints (no ArcGIS Maps SDK needed just for this). This
+   is what Experience Builder access control gates — only people you've
+   granted access to the app item can get this far. Standalone, it's a
+   full-page redirect; embedded in an iframe it opens a popup instead
+   (redirecting the iframe itself is blocked by ArcGIS's login page), and
+   this app's own `index.html` doubles as its OAuth callback page — no
+   separate callback file to host.
 2. Once signed in, the app reads the ReadyOp `account_id`/`token` from the
    protected ArcGIS feature layer (`ReadyOp/FeatureServer/0`), using the
    user's own ArcGIS token to authorize that read.
@@ -70,17 +76,14 @@ placeholders (`account_id`, `token`).
 In the ArcGIS Developers / your org's Content settings for the app item
 tied to client ID `x7YT2DckqrgUfSQf`:
 
-- Add `https://temagis.github.io/ReadyOp-Contacts/` as a **Redirect URI**.
-- Since sign-in uses a popup (`popup: true` in `arcgis-auth.js`, required so
-  the OAuth flow doesn't navigate away from the Experience Builder iframe),
-  the SDK needs `oauth-callback.html` (included at the project root) to
-  exist right next to `index.html` — that's the page the popup lands on
-  after you approve sign-in; it hands the result back to the main window
-  and closes itself. It's Esri's standard file
-  (from [Esri/jsapi-resources](https://github.com/Esri/jsapi-resources/blob/main/oauth/oauth-callback.html)),
-  unmodified — nothing to edit in it. Make sure it's pushed to the repo
-  alongside everything else, at
-  `https://temagis.github.io/ReadyOp-Contacts/oauth-callback.html`.
+- Confirm the app item is registered as a **Native Application** (or
+  another public-client type) — this flow uses PKCE and needs no client
+  secret, which only that app type supports.
+- Add `https://temagis.github.io/ReadyOp-Contacts/` as a **Redirect URI**
+  (must exactly match `ARCGIS_REDIRECT_URI` in `config.js`, trailing slash
+  included). That's the only URI needed — this app's own root page handles
+  the OAuth callback itself, so there's no separate callback file or URL
+  to register.
 - Share the app item (and the credentials feature layer) with whichever
   ArcGIS group represents your trusted contact-editors.
 

@@ -6,14 +6,31 @@
 // ---------------------------------------------------------------------------
 
 export const CONFIG = {
-  // --- ArcGIS OAuth ---
+  // --- ArcGIS OAuth (authorization-code + PKCE, no ArcGIS Maps SDK needed) ---
   // Portal to authenticate against. Use "https://www.arcgis.com" for any
   // ArcGIS Online org, or "https://<your-org>.maps.arcgis.com" to skip the
   // "choose your organization" step on the sign-in screen.
   ARCGIS_PORTAL_URL: "https://www.arcgis.com",
 
-  // Your registered ArcGIS OAuth application's client ID.
+  // Your registered ArcGIS OAuth application's client ID. Must be
+  // registered as a "Native Application" (or similar public-client type)
+  // so PKCE works without a client secret.
   ARCGIS_APP_ID: "x7YT2DckqrgUfSQf",
+
+  // Must exactly match a Redirect URI registered on that OAuth app
+  // (including trailing slash). This app's own root doubles as its OAuth
+  // callback page — no separate callback file needed.
+  ARCGIS_REDIRECT_URI: "https://temagis.github.io/ReadyOp-Contacts/",
+
+  // Refresh-token lifetime in MINUTES (ArcGIS max is 20160 = 14 days).
+  // Governs how long a signed-in session lasts before a full re-login.
+  ARCGIS_TOKEN_EXPIRATION_MINUTES: 20160,
+
+  // Refresh the access token this many ms before it actually expires.
+  ARCGIS_REFRESH_BUFFER_MS: 5 * 60 * 1000,
+
+  // localStorage key the ArcGIS token is cached under.
+  ARCGIS_TOKEN_STORAGE_KEY: "readyop_contacts_arcgis_token_v1",
 
   // --- Credentials source ---
   // The protected feature layer holding the ReadyOp account_id/token as its

@@ -55,30 +55,52 @@ export const CONFIG = {
   READYOP_API_BASE_URL: "https://readyop-contacts-relay.alan-spraggins.workers.dev",
   READYOP_DIRECT_BASE_URL: "https://tn.readyop.com",
 
-  // Contacts list page size (ReadyOp allows up to 10,000; keep it modest
-  // for a responsive UI and paginate instead).
-  PAGE_SIZE: 100,
+  // --- Roster loading & search ---
+  // The single search box and the Region/County filters all need to
+  // match on fields ReadyOp's search API can't combine into one query
+  // (see REGION_FIELD/COUNTY_FIELD below) — so instead of paging through
+  // search results from the server, the app fetches the WHOLE roster
+  // once per sign-in (a few requests of this page size each, well under
+  // ReadyOp's documented 10,000-row max) and keeps it in memory. Search
+  // and every filter then run instantly against that in-memory copy, and
+  // "continuous scroll" just reveals more of the already-filtered array
+  // rather than fetching more from the network.
+  ROSTER_FETCH_PAGE_SIZE: 1000,
 
-  // --- Region filter ---
+  // How many rows to render into the DOM per batch as the user scrolls
+  // (rendering all ~3,000+ rows at once would be wasteful — this keeps
+  // the list responsive by only building rows as they're needed).
+  RENDER_BATCH_SIZE: 100,
+
+  // --- Region / County filters ---
   // ReadyOp's REST API has no native "Region" or "County" field — this
   // agency's roster uses two of its ten generic custom columns for them
   // (Agency Administrator > Access > Agencies > double-click agency >
   // Modify Agency, to see/rename all ten). Confirmed from a live API
   // response: the JSON key is "Custom 8" (contacts use "Custom 0" through
   // "Custom 20" as field names — NOT the "Custom_1".."Custom_10" naming
-  // ReadyOp's docs use for search filter params, which is why this filter
-  // is applied client-side against the field below rather than as a
-  // server-side search parameter of uncertain name.
+  // ReadyOp's docs use for search filter params, which is why these are
+  // matched client-side rather than as server-side search parameters of
+  // uncertain name.
   REGION_FIELD: "Custom 8",
-  // Same caveat — "Custom 1" appears to hold County, unused by the filter
-  // today but documented here in case it's needed later.
   COUNTY_FIELD: "Custom 1",
-  // Options shown in the Region filter dropdown. Matching against
+  // Fixed options for the Region filter's pill row. Matching against
   // REGION_FIELD is case-insensitive, so "Southeast" also matches a
   // "southeast" value in the data.
   REGION_OPTIONS: ["West", "Middle", "Southeast", "East"],
-  // Page size used only when scanning the full roster for a Region match
-  // (every contact has to be fetched once to filter client-side). Well
-  // under ReadyOp's documented 10,000 max.
-  REGION_SCAN_PAGE_SIZE: 1000,
+  // The County filter's options are NOT hardcoded — they're derived from
+  // whatever distinct values actually appear in COUNTY_FIELD across the
+  // loaded roster, sorted alphabetically. That also means inconsistent
+  // source data shows up as separate options (e.g. "Fayette" and
+  // "Fayette County" as two entries, if the roster has both) — this
+  // isn't normalized/guessed at, since only someone who knows the data
+  // can say which spelling is canonical.
+
+  // --- Free-text search ---
+  // The single search box matches (case-insensitive substring) against
+  // all of these contact fields at once, OR'd together — e.g. typing
+  // "Coffee" matches on Organization ("Coffee County EMA") just as much
+  // as on County ("Coffee"). Extend this list if another field should be
+  // searchable too.
+  SEARCH_FIELDS: ["First", "Last", "Organization", "Title", "Tags"],
 };

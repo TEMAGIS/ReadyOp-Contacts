@@ -10,11 +10,12 @@ const appScreen = $("#app-screen");
 const userLabel = $("#user-label");
 const statusBar = $("#status-bar");
 const contactList = $("#contact-list");
-const searchForm = $("#search-form");
+const searchInput = $("#search-input");
 const filterToggleBtn = $("#filter-toggle-btn");
 const regionDrawer = $("#region-drawer");
 const regionDrawerClose = $("#region-drawer-close");
 const regionPillRow = $("#region-pill-row");
+const countySelect = $("#county-select");
 const activeFiltersBar = $("#active-filters");
 const pagerInfo = $("#pager-info");
 const editPanel = $("#edit-panel");
@@ -26,22 +27,27 @@ const oauthSignInBtn = $("#sign-in-btn");
 
 let creds = null;
 let selectedContactId = null;
-let activeRegion = ""; // "" means no Region filter — see setRegion()/the filter drawer below
 
-// Infinite-scroll list state
-let nextPageToLoad = 0;
-let totalPages = 1;
-let totalResults = 0;
-let loadedCount = 0;
-let isLoadingMore = false;
+// --- Roster: fetched in full once per sign-in, then everything (search,
+// Region, County, continuous scroll) operates on this in-memory copy —
+// see loadRoster() below for why. ---
+let allContacts = [];
+let rosterLoading = false;
 let hasLoggedSample = false;
-let regionScanActive = false; // true while a Region filter's full-roster scan is in progress or holding results
-let loadGeneration = 0; // bumped on every resetAndLoadList so a stale in-flight fetch (e.g. the user changed filters again before it finished) can detect it's been superseded and quietly stop instead of corrupting the newer results
+const knownCounties = new Set();
 
+// --- Search + filters ---
+let searchTerm = "";
+let activeRegion = ""; // "" = no Region filter
+let activeCounty = ""; // "" = no County filter
+
+// --- Rendering (reveals more of the already-filtered array as the user scrolls) ---
+let filteredContacts = [];
+let renderedCount = 0;
 const SCROLL_LOAD_THRESHOLD_PX = 200;
 
-// --- Region filter drawer (same filter-button/slide-up-drawer/pill
-// pattern as the sibling PREDS app, for visual consistency) ---
+// --- Region/County filter drawer (same filter-button/slide-up-drawer/
+// pill pattern as the sibling PREDS app, for visual consistency) ---
 
 buildRegionPills();
 
@@ -64,6 +70,24 @@ function buildRegionPills() {
     pill.textContent = region;
     pill.addEventListener("click", () => setRegion(region));
     regionPillRow.appendChild(pill);
+  }
+}
+
+/** Rebuilds the County <select>'s options from whatever distinct values have been seen so far in COUNTY_FIELD across the loaded roster (called as more of the roster streams in, and once more when it finishes) — not a hardcoded list, since only the live data can say what's actually there (including any inconsistent spellings). */
+function refreshCountyOptions() {
+  const previousValue = countySelect.value;
+  countySelect.innerHTML = `<option value="">All counties</option>`;
+  [...knownCounties].sort((a, b) => a.localeCompare(b)).forEach((county) => {
+    const opt = document.createElement("option");
+    opt.value = county;
+    opt.textContent = county;
+    countySelect.appendChild(opt);
+  });
+  // Restore the selection if that county is still in the (possibly
+  // regrown) list — it always will be once the roster has fully loaded,
+  // this only matters for the brief window while it's still streaming in.
+  if (previousValue && [...countySelect.options].some((o) => o.value === previousValue)) {
+    countySelect.value = previousValue;
   }
 }
 
@@ -91,7 +115,7 @@ function setRegion(region) {
   syncRegionPills();
   updateActiveFiltersBar();
   toggleRegionDrawer(true);
-  resetAndLoadList();
+  applyFilters();
 }
 
 function syncRegionPills() {
@@ -102,17 +126,40 @@ function syncRegionPills() {
   });
 }
 
+countySelect.addEventListener("change", () => {
+  activeCounty = countySelect.value;
+  updateActiveFiltersBar();
+  applyFilters();
+  // County (unlike Region) doesn't close the drawer on selection — matches
+  // PREDS's own zone-filter pattern, which also stays open after picking,
+  // since a <select> doesn't have the same "I'm clearly done" signal a
+  // pill tap does.
+});
+
 function updateActiveFiltersBar() {
-  filterToggleBtn.classList.toggle("has-filter", !!activeRegion);
-  if (!activeRegion) {
-    activeFiltersBar.innerHTML = "";
-    return;
-  }
-  activeFiltersBar.innerHTML = `<button type="button" class="active-chip" aria-label="Remove Region filter">Region: ${escapeHtml(activeRegion)}<span class="active-chip-x" aria-hidden="true">×</span></button>`;
+  filterToggleBtn.classList.toggle("has-filter", !!activeRegion || !!activeCounty);
+  const chips = [];
+  if (activeRegion) chips.push({ kind: "region", label: `Region: ${activeRegion}` });
+  if (activeCounty) chips.push({ kind: "county", label: `County: ${activeCounty}` });
+  activeFiltersBar.innerHTML = chips
+    .map(
+      (c) =>
+        `<button type="button" class="active-chip" data-clear="${c.kind}" aria-label="Remove filter: ${escapeHtml(c.label)}">${escapeHtml(c.label)}<span class="active-chip-x" aria-hidden="true">×</span></button>`
+    )
+    .join("");
 }
 
 activeFiltersBar.addEventListener("click", (e) => {
-  if (e.target.closest(".active-chip")) setRegion("");
+  const chip = e.target.closest(".active-chip[data-clear]");
+  if (!chip) return;
+  const kind = chip.getAttribute("data-clear");
+  if (kind === "region") setRegion("");
+  else if (kind === "county") {
+    activeCounty = "";
+    countySelect.value = "";
+    updateActiveFiltersBar();
+    applyFilters();
+  }
 });
 
 function setStatus(message, isError = false) {
@@ -208,162 +255,127 @@ async function enterApp() {
 
   appScreen.hidden = false;
   setStatus("");
-  await resetAndLoadList();
-}
-
-/** Text-search fields ReadyOp's API actually supports as query params — excludes Region, which isn't a real API field (see loadRegionFiltered). */
-function currentTextFilters() {
-  const data = new FormData(searchForm);
-  const filters = {};
-  for (const [key, value] of data.entries()) {
-    if (key === "Region") continue;
-    if (value) filters[key] = value;
-  }
-  return filters;
-}
-
-function currentRegionFilter() {
-  return activeRegion;
-}
-
-/** Clears the list and loads the first page — call on initial load or when the search filters change. */
-async function resetAndLoadList() {
-  const myGeneration = ++loadGeneration;
-  nextPageToLoad = 0;
-  totalPages = 1;
-  totalResults = 0;
-  loadedCount = 0;
-  regionScanActive = false;
-  contactList.innerHTML = "";
-  updateListFooter();
-
-  const region = currentRegionFilter();
-  if (region) {
-    await loadRegionFiltered(region, myGeneration);
-  } else {
-    await loadMoreContacts(myGeneration);
-  }
+  await loadRoster();
 }
 
 /**
- * ReadyOp's search API has no "Region" query parameter — Region lives in
- * a generic custom field (CONFIG.REGION_FIELD) that isn't documented as
- * filterable server-side. So a Region filter instead scans the whole
- * (optionally text-filtered) result set page by page and keeps only the
- * contacts whose REGION_FIELD matches, case-insensitively. Unlike the
- * normal infinite-scroll list, this loads everything up front.
+ * Fetches the ENTIRE contact roster once, in batches of
+ * CONFIG.ROSTER_FETCH_PAGE_SIZE, into allContacts. Everything downstream
+ * — the search box, the Region/County filters, and the "continuous
+ * scroll" list — then runs against that in-memory copy instead of
+ * hitting the network again. Why: the search box matches across several
+ * fields at once (an OR), and Region/County live in custom columns
+ * ReadyOp's search API isn't documented to filter by — neither is
+ * expressible as a single server-side query, so there's no way to page
+ * through "just the matches" from the server. With ~3,000 contacts, one
+ * short burst of requests up front is simpler and faster in practice
+ * than re-querying the server on every keystroke or filter change.
+ * Renders progressively as pages arrive (via applyFilters()) rather than
+ * leaving the list blank until the whole roster is in.
  */
-async function loadRegionFiltered(region, generation) {
-  regionScanActive = true;
-  isLoadingMore = true;
-  const textFilters = currentTextFilters();
-  const wantedRegion = region.toLowerCase();
+async function loadRoster() {
+  rosterLoading = true;
+  allContacts = [];
+  knownCounties.clear();
+  hasLoggedSample = false;
   let page = 0;
   let pages = 1;
-  let scanned = 0;
-  let matched = 0;
+  let total = 0;
   try {
     do {
-      if (generation !== loadGeneration) return; // superseded by a newer search — stop quietly
-      pagerInfo.textContent = `Scanning for "${region}"… ${matched} match${matched === 1 ? "" : "es"} so far (${scanned} contacts checked)`;
-      setStatus(`Scanning contacts for Region "${region}"…`);
+      setStatus(
+        total ? `Loading contacts… ${allContacts.length} of ${total}` : "Loading contacts…"
+      );
       const result = await listContacts(creds, {
         page,
-        pageSize: CONFIG.REGION_SCAN_PAGE_SIZE,
-        filters: textFilters,
+        pageSize: CONFIG.ROSTER_FETCH_PAGE_SIZE,
+        filters: {},
       });
-      if (generation !== loadGeneration) return; // superseded while this page was in flight
       const contacts = result.Contacts || [];
       pages = result.Pages ?? 1;
-      scanned += contacts.length;
-      const pageMatches = contacts.filter(
-        (c) => (c[CONFIG.REGION_FIELD] || "").trim().toLowerCase() === wantedRegion
-      );
-      matched += pageMatches.length;
-      loadedCount = matched;
-      totalResults = matched;
-      appendContactRows(pageMatches);
+      total = result.Total_Results ?? contacts.length;
+
+      if (!hasLoggedSample && contacts.length) {
+        hasLoggedSample = true;
+        // Diagnostic: dump the first contact's full raw record and field
+        // names to the console. Open DevTools (F12) → Console to inspect
+        // any custom field ReadyOp returns beyond Region/County.
+        console.info("[ReadyOp Contacts] sample raw contact record:", contacts[0]);
+        console.info("[ReadyOp Contacts] field names on that record:", Object.keys(contacts[0]));
+      }
+
+      for (const c of contacts) {
+        const county = (c[CONFIG.COUNTY_FIELD] || "").trim();
+        if (county) knownCounties.add(county);
+      }
+      allContacts.push(...contacts);
+      refreshCountyOptions();
+      applyFilters(); // progressively reveals results as more of the roster streams in
       page++;
     } while (page < pages);
-    if (generation === loadGeneration) setStatus("");
+    setStatus("");
   } catch (err) {
-    if (generation === loadGeneration) setStatus(`Failed to load contacts: ${err.message}`, true);
+    setStatus(`Failed to load contacts: ${err.message}`, true);
   } finally {
-    if (generation === loadGeneration) {
-      isLoadingMore = false;
-      pagerInfo.textContent =
-        loadedCount === 0
-          ? `No contacts found for Region "${region}".`
-          : `${loadedCount} contact${loadedCount === 1 ? "" : "s"} in Region "${region}"`;
-      if (loadedCount === 0) contactList.innerHTML = `<li class="empty">No contacts match your search.</li>`;
-    }
+    rosterLoading = false;
+    applyFilters();
   }
 }
 
-/** Fetches the next page of the current filtered search and appends it to the list. Safe to call repeatedly (e.g. from a scroll handler) — no-ops while a load is already in flight, no pages remain, or a Region scan is active (see loadRegionFiltered). Continuous-scroll only (no "Load more" button): if the newly-loaded content still doesn't fill/overflow the list pane, it keeps loading further pages on its own so there's always something to scroll against. */
-async function loadMoreContacts(generation = loadGeneration) {
-  if (isLoadingMore || nextPageToLoad >= totalPages || regionScanActive) return;
-  if (generation !== loadGeneration) return;
-  isLoadingMore = true;
-  setStatus("Loading contacts…");
-  let fetchedThisCall = 0;
-  try {
-    const result = await listContacts(creds, {
-      page: nextPageToLoad,
-      pageSize: CONFIG.PAGE_SIZE,
-      filters: currentTextFilters(),
-    });
-    if (generation !== loadGeneration) return; // superseded while this page was in flight
+function normalizedSearchHaystack(c) {
+  const parts = CONFIG.SEARCH_FIELDS.map((f) => c[f]);
+  parts.push(c[CONFIG.COUNTY_FIELD], c[CONFIG.REGION_FIELD]);
+  return parts.filter(Boolean).join(" ").toLowerCase();
+}
 
-    const contacts = result.Contacts || [];
+function matchesFilters(c) {
+  if (searchTerm && !normalizedSearchHaystack(c).includes(searchTerm)) return false;
+  if (activeRegion && (c[CONFIG.REGION_FIELD] || "").trim().toLowerCase() !== activeRegion.toLowerCase()) {
+    return false;
+  }
+  if (activeCounty && (c[CONFIG.COUNTY_FIELD] || "").trim() !== activeCounty) return false;
+  return true;
+}
 
-    // One-time diagnostic: dump the first contact's full raw record and
-    // field names to the console. Open DevTools (F12) → Console to
-    // inspect any other custom field ReadyOp returns (e.g. County, which
-    // this build doesn't filter on yet — see CONFIG.COUNTY_FIELD).
-    if (!hasLoggedSample && contacts.length) {
-      hasLoggedSample = true;
-      console.info("[ReadyOp Contacts] sample raw contact record:", contacts[0]);
-      console.info("[ReadyOp Contacts] field names on that record:", Object.keys(contacts[0]));
-    }
+/** Re-filters allContacts against the current search/Region/County state, resets the visible list, and renders the first batch. Call whenever the search box, a filter, or the underlying roster changes. */
+function applyFilters() {
+  filteredContacts = allContacts.filter(matchesFilters);
+  renderedCount = 0;
+  contactList.innerHTML = "";
+  revealMore();
+}
 
-    totalPages = result.Pages ?? 1;
-    totalResults = result.Total_Results ?? contacts.length;
-    nextPageToLoad = (result.Page ?? nextPageToLoad) + 1;
-    loadedCount += contacts.length;
-    fetchedThisCall = contacts.length;
-    appendContactRows(contacts);
+/** Renders the next CONFIG.RENDER_BATCH_SIZE not-yet-rendered rows from filteredContacts. Safe to call repeatedly (scroll handler, or to auto-fill a pane that doesn't yet overflow) — no-ops once everything filtered is already rendered. */
+function revealMore() {
+  const nextBatch = filteredContacts.slice(renderedCount, renderedCount + CONFIG.RENDER_BATCH_SIZE);
+  if (nextBatch.length === 0) {
+    updateListFooter();
     if (contactList.children.length === 0) {
       contactList.innerHTML = `<li class="empty">No contacts match your search.</li>`;
     }
-    setStatus("");
-  } catch (err) {
-    if (generation === loadGeneration) setStatus(`Failed to load contacts: ${err.message}`, true);
-  } finally {
-    if (generation === loadGeneration) {
-      isLoadingMore = false;
-      updateListFooter();
-      // Nothing to scroll against yet (short first page on a tall pane,
-      // for instance) but more is available — keep loading automatically
-      // rather than leaving the user stuck with no way to trigger the
-      // next page. Stops itself once the list actually overflows, once
-      // pages run out, or if a page ever comes back empty.
-      if (fetchedThisCall > 0 && nextPageToLoad < totalPages && contactList.scrollHeight <= contactList.clientHeight + SCROLL_LOAD_THRESHOLD_PX) {
-        loadMoreContacts(generation);
-      }
-    }
+    return;
+  }
+  appendContactRows(nextBatch);
+  renderedCount += nextBatch.length;
+  updateListFooter();
+  // Keep revealing more if the pane still doesn't even overflow — same
+  // reasoning as the old network version had: otherwise there'd be
+  // nothing to scroll against on a short first batch / tall window.
+  if (renderedCount < filteredContacts.length && contactList.scrollHeight <= contactList.clientHeight + SCROLL_LOAD_THRESHOLD_PX) {
+    revealMore();
   }
 }
 
 function updateListFooter() {
-  if (loadedCount === 0) {
-    pagerInfo.textContent = isLoadingMore ? "Loading…" : "";
+  if (rosterLoading) {
+    pagerInfo.textContent = `Loading full roster… ${filteredContacts.length} match so far`;
+  } else if (filteredContacts.length === 0) {
+    pagerInfo.textContent = "";
   } else {
-    pagerInfo.textContent = `${loadedCount} of ${totalResults} contacts`;
+    pagerInfo.textContent = `${renderedCount} of ${filteredContacts.length} contacts`;
   }
 }
 
-/** Appends rows for the given contacts. Doesn't render an "empty" state itself — callers check contactList.children.length once they know no more results are coming (a mid-scan empty page isn't necessarily the final state; see loadRegionFiltered). */
 function appendContactRows(contacts) {
   for (const c of contacts) {
     const li = document.createElement("li");
@@ -378,17 +390,24 @@ function appendContactRows(contacts) {
   }
 }
 
-searchForm.addEventListener("submit", (e) => {
-  e.preventDefault();
-  resetAndLoadList();
+// Live search — filters instantly against the in-memory roster, no
+// submit button needed. Debounced slightly so a fast typist doesn't
+// trigger a re-render on every keystroke.
+let searchDebounceTimer = null;
+searchInput.addEventListener("input", () => {
+  clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(() => {
+    searchTerm = searchInput.value.trim().toLowerCase();
+    applyFilters();
+  }, 150);
 });
 
-// Auto-load the next page once the user scrolls near the bottom of the
+// Auto-load the next batch once the user scrolls near the bottom of the
 // list — pure continuous scroll, no button.
 contactList.addEventListener("scroll", () => {
   const distanceFromBottom =
     contactList.scrollHeight - contactList.scrollTop - contactList.clientHeight;
-  if (distanceFromBottom < SCROLL_LOAD_THRESHOLD_PX) loadMoreContacts();
+  if (distanceFromBottom < SCROLL_LOAD_THRESHOLD_PX) revealMore();
 });
 
 async function selectContact(contactId) {
@@ -464,6 +483,10 @@ editForm.addEventListener("submit", async (e) => {
     // Refresh just this row's name/sub-line in place rather than
     // reloading the whole (possibly long, scrolled) list.
     updateContactRowText(contactId, fields);
+    // Also patch the in-memory roster so a later re-search/re-filter
+    // shows the edit instead of the stale pre-save name/org/title/tags.
+    const cached = allContacts.find((c) => String(c["Contact ID"]) === String(contactId));
+    if (cached) Object.assign(cached, fields);
   } catch (err) {
     setStatus(`Save failed: ${err.message}`, true);
   }

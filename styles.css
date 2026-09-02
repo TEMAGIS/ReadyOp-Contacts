@@ -171,49 +171,60 @@ button[type="submit"] { background: var(--accent); color: #fff; border-color: va
   min-width: 0;
 }
 
-.search-form {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-  padding: 0.9rem 0.75rem;
-  border-bottom: 1px solid var(--border);
-  background: #fff;
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
-.search-form input,
-.search-form select {
-  grid-column: span 1;
-  min-width: 0;
-  padding: 0.5rem 0.6rem;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font-size: 0.88rem;
+
+/* ── Search bar ──────────────────────────────────────────────────
+   Single box, live-filters as you type against every field listed in
+   CONFIG.SEARCH_FIELDS (plus County/Region) — replaced the earlier
+   First/Last/Organization/Tags four-input grid. Styled to match the
+   sibling PREDS app's own search bar. */
+.search-wrap {
+  position: relative;
+  margin: 0.75rem 0.75rem 0.5rem;
+}
+.search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+#search-input {
+  width: 100%;
+  padding: 0.55rem 0.6rem 0.55rem 34px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.9rem;
   font-family: inherit;
   background: #fff;
   color: #1c2126;
+  outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-.search-form input:focus,
-.search-form select:focus {
-  outline: none;
-  border-color: var(--tema-blue);
-  box-shadow: 0 0 0 3px rgba(0, 40, 104, 0.12);
-}
-.search-form button[type="submit"] {
-  grid-column: span 2;
-  margin-top: 0.15rem;
-  background: var(--tema-blue);
-  border-color: var(--tema-blue);
-  color: #fff;
-  font-weight: 600;
-  padding: 0.55rem 0.9rem;
-}
-.search-form button[type="submit"]:hover { background: #001d4d; border-color: #001d4d; }
+#search-input:focus { border-color: var(--focus); box-shadow: 0 0 0 3px rgba(255, 191, 71, 0.35); }
 
-/* ── Region filter button + drawer ────────────────────────────────
+.list-toolbar {
+  display: flex;
+  padding: 0 0.75rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  background: #fff;
+}
+
+/* ── Region/County filter button + drawer ─────────────────────────
    Adapted from the sibling PREDS app's filter-button/drawer pattern
    (same tema-blue visual language) for consistency across CUSEC/TEMA
-   apps, rather than a plain <select>. */
-.search-form .filter-btn { grid-column: span 2; justify-content: center; }
+   apps, rather than plain <select>s inline in the search area. */
 .filter-btn {
   display: flex;
   align-items: center;
@@ -297,7 +308,15 @@ button[type="submit"] { background: var(--accent); color: #fff; border-color: va
 }
 .filter-drawer-close:hover { background: rgba(255, 255, 255, 0.22); }
 
-.buf-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.buf-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0 0 6px;
+}
+.buf-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
 .buft {
   padding: 6px 12px;
   border-radius: 16px;
@@ -312,6 +331,19 @@ button[type="submit"] { background: var(--accent); color: #fff; border-color: va
 }
 .buft:hover { background: rgba(255, 255, 255, 0.18); }
 .buft.active { background: #fff; color: var(--tema-blue); border-color: #fff; }
+
+#county-select {
+  width: 100%;
+  padding: 0.55rem 0.6rem;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 0.85rem;
+  font-family: inherit;
+}
+#county-select:focus { outline: 3px solid var(--focus); outline-offset: 1px; }
+#county-select option { color: #1c2126; }
 
 #contact-list {
   list-style: none;

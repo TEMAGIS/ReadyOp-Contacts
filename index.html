@@ -9,7 +9,7 @@
        an old copy cached can keep using it even after you've pushed new
        files, which looks like "my fix isn't showing up." Bump this value
        (e.g. to today's date) any time you redeploy changed CSS/JS. -->
-  <link rel="stylesheet" href="styles.css?v=20260902c" />
+  <link rel="stylesheet" href="styles.css?v=20260902d" />
 </head>
 <body>
   <!-- ════════════════════════════════════════════════════════════
@@ -71,17 +71,17 @@
 
   <main id="app-screen" class="app-layout" hidden>
     <section class="list-pane">
-      <form id="search-form" class="search-form">
-        <input name="First" placeholder="First name" autocomplete="off" />
-        <input name="Last" placeholder="Last name" autocomplete="off" />
-        <input name="Organization" placeholder="Organization" autocomplete="off" />
-        <input name="Tags" placeholder="Tags" autocomplete="off" />
+      <div class="search-wrap">
+        <label for="search-input" class="sr-only">Search contacts</label>
+        <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input id="search-input" type="search" placeholder="Search by name, organization, county, tags…" autocomplete="off" aria-label="Search contacts" />
+      </div>
+      <div class="list-toolbar">
         <button type="button" id="filter-toggle-btn" class="filter-btn" aria-expanded="false" aria-controls="region-drawer">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
-          Filter by Region
+          Filter
         </button>
-        <button type="submit">Search</button>
-      </form>
+      </div>
       <div class="active-filters" id="active-filters" aria-label="Active filters" aria-live="polite"></div>
       <ul id="contact-list"></ul>
       <div class="list-footer">
@@ -218,14 +218,20 @@
        ════════════════════════════════════════════════════════════ -->
   <div id="region-drawer" aria-hidden="true" inert>
     <div class="filter-drawer-header">
-      <div class="filter-drawer-title">Filter by Region</div>
+      <div class="filter-drawer-title">Filters</div>
       <button type="button" class="filter-drawer-close" id="region-drawer-close" aria-label="Close filters">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
       </button>
     </div>
+    <div class="buf-label">Region</div>
     <div class="buf-row" id="region-pill-row" role="group" aria-label="Filter by region"></div>
+
+    <div class="buf-label">County</div>
+    <select id="county-select" aria-label="Filter by county">
+      <option value="">All counties</option>
+    </select>
   </div>
 
-  <script type="module" src="app.js?v=20260902c"></script>
+  <script type="module" src="app.js?v=20260902d"></script>
 </body>
 </html>

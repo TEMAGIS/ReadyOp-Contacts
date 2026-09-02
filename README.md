@@ -143,40 +143,67 @@ keep that.
   city/state/zip, fax — visible in your agency's Roster columns) aren't
   in the edit form yet. Easy to add if you want them editable here too.
 
-## List behavior: continuous scroll
+## How the list loads: fetch the whole roster once, then work in memory
 
-The contact list loads 100 at a time (`CONFIG.PAGE_SIZE`) and
-automatically loads the next page as you scroll near the bottom — no
-"Load more" button; if the first page doesn't even fill the visible list
-(e.g. a tall window), it keeps auto-loading further pages on its own
-until there's actually something to scroll against.
+On sign-in, the app fetches the ENTIRE contact roster once (a handful of
+requests in batches of `CONFIG.ROSTER_FETCH_PAGE_SIZE`, well under
+ReadyOp's documented 10,000-row cap) and keeps it in memory for the rest
+of the session. The search box and both filters then run instantly
+against that in-memory copy — no network round trip per keystroke or
+filter change — and "continuous scroll" just reveals more of the
+already-filtered list rather than fetching more from the server. The
+list renders progressively as the roster streams in, rather than staying
+blank until all of it has arrived.
 
-## Region filter
+Why not page through server-side search results like before: the search
+box now matches across several fields at once (an OR — see below), and
+Region/County live in custom columns ReadyOp's search API isn't
+documented to filter by (see the next section) — neither is expressible
+as a single server-side query. With ~3,000 contacts, fetching once up
+front is simpler and faster in practice than re-querying per keystroke.
 
-The Region filter (West / Middle / Southeast / East) uses the same
-filter-button + slide-up-drawer + pill pattern as the sibling PREDS app,
-for visual consistency across CUSEC/TEMA apps: a "Filter by Region"
-button above the contact list opens a drawer of region pills; picking one
-closes the drawer, shows a removable "Region: West ×" chip above the
-list, and highlights the Filter button itself. This replaced an earlier
-plain `<select>`.
+## Search
 
-ReadyOp's REST API has no native "Region" field or a documented way to
-filter by one server-side — in this agency's roster, Region turned out to
-be one of ReadyOp's ten generic custom columns, exposed by the API as the
-JSON field `"Custom 8"` (confirmed from a live API response; see
-`CONFIG.REGION_FIELD` in `config.js`). Because there's no confirmed
-server-side filter parameter for it, selecting a Region scans the whole
-roster (or the whole result of any First/Last/Organization/Tags filters
-also set) page by page and keeps only the matches — this is a few
-requests behind the scenes (in batches of `CONFIG.REGION_SCAN_PAGE_SIZE`,
-well under ReadyOp's documented 10,000-row cap) rather than one instant
-query. Matching is case-insensitive, so a "southeast" value in the data
-still matches the "Southeast" option.
+A single search box (matching the sibling PREDS app's own search-bar
+style) replaced the earlier First/Last/Organization/Tags four-field grid.
+It matches, case-insensitively, against every field listed in
+`CONFIG.SEARCH_FIELDS` (First, Last, Organization, Title, Tags by
+default) plus County and Region — so typing "Coffee" matches an
+Organization like "Coffee County EMA" just as much as a County of
+"Coffee". Extend `SEARCH_FIELDS` in `config.js` if another field should
+be searchable too.
+
+## Region / County filters
+
+A "Filter" button above the contact list opens a slide-up drawer — same
+filter-button + drawer + pill pattern as the sibling PREDS app, for
+visual consistency across CUSEC/TEMA apps. It has two filters:
+
+- **Region** (West / Middle / Southeast / East) — pill buttons,
+  single-select; picking one closes the drawer immediately (matching how
+  PREDS's own single-select filters behave).
+- **County** — a dropdown built from whatever distinct values actually
+  appear in the roster's County field (not a hardcoded list), sorted
+  alphabetically. If the source data has inconsistent spellings (e.g.
+  both "Fayette" and "Fayette County" show up in ReadyOp), both appear as
+  separate options rather than being silently merged — only someone who
+  knows the data should decide which spelling is canonical.
+
+Either filter (or both together) shows a removable chip — "Region: West
+×", "County: Fayette ×" — above the contact list, and lights up the
+Filter button itself while active.
+
+ReadyOp's REST API has no native "Region" or "County" field — in this
+agency's roster, they turned out to be two of ReadyOp's ten generic
+custom columns, exposed by the API as the JSON fields `"Custom 8"` and
+`"Custom 1"` respectively (confirmed from a live API response; see
+`CONFIG.REGION_FIELD`/`COUNTY_FIELD` in `config.js`). Matching is
+case-insensitive for Region, so a "southeast" value in the data still
+matches the "Southeast" pill.
 
 If your agency ever renumbers or relabels its custom fields (Menu →
 Access → Manage Access → Agencies → double-click the agency → Modify
-Agency), update `REGION_FIELD` in `config.js` to match.
+Agency), update `REGION_FIELD`/`COUNTY_FIELD` in `config.js` to match.
 
 ## If a change you deployed doesn't seem to show up
 

@@ -1,0 +1,7 @@
+name = "readyop-contacts-relay"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+# No KV, D1, secrets, or bindings needed — this worker is a stateless
+# request/response pass-through and never touches the ReadyOp credentials
+# itself.

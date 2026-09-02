@@ -35,7 +35,7 @@ export const CONFIG = {
   // tn.readyop.com directly (see README). Point this at the relay for now.
   // If ReadyOp later whitelists this app's origin(s), switch this to
   // READYOP_DIRECT_BASE_URL and delete the relay entirely.
-  READYOP_API_BASE_URL: "https://READYOP-RELAY-PLACEHOLDER.workers.dev",
+  READYOP_API_BASE_URL: "https://readyop-contacts-relay.alan-spraggins.workers.dev",
   READYOP_DIRECT_BASE_URL: "https://tn.readyop.com",
 
   // Contacts list page size (ReadyOp allows up to 10,000; keep it modest

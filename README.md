@@ -25,21 +25,36 @@ anyway. If that ever stops being true, the fix is to move the ReadyOp
 credential into the relay (see below) and have the relay authorize each
 call against the caller's ArcGIS token — happy to build that if needed.
 
-## Why there's a Cloudflare Worker in here
+## Why there's a relay in here
 
 ReadyOp's API doesn't send CORS headers, so browsers refuse to let this
 app's JavaScript read the response when calling `tn.readyop.com` directly
 from `https://temagis.github.io` (confirmed — the preflight request fails
-with "No 'Access-Control-Allow-Origin' header is present"). The worker in
-`cloudflare-worker/` is a dumb pass-through: it forwards the request to
-ReadyOp unchanged and adds the missing CORS headers on the way back. It
-never sees the credentials any differently than ReadyOp itself does — the
-Authorization header just passes through it.
+with "No 'Access-Control-Allow-Origin' header is present"). Something has
+to sit between the browser and ReadyOp purely to add those headers back —
+it doesn't hold or see the credentials any differently than ReadyOp itself
+does, since the Authorization header just passes through it unchanged.
+
+Two interchangeable implementations of that relay are included:
+
+- **`cloudflare-worker/`** — the current pick. This endpoint has to be
+  invocable by anyone (no browser can do AWS request-signing, so it can't
+  be locked down with IAM auth), and deliberately keeping that open,
+  no-real-authorization endpoint on its own dedicated Cloudflare account —
+  separate from CUSEC's main AWS account, its IAM roles, and its billing —
+  limits the blast radius if it's ever probed or abused. It touches nothing
+  else you run.
+- **`aws-lambda/`** — kept as a documented alternative/fallback. Same
+  functionality, but living on AWS trades that isolation for reuse of
+  infrastructure you already operate.
+
+Only deploy one of the two. Either way, once it's live you point
+`config.js`'s `READYOP_API_BASE_URL` at it.
 
 **If ReadyOp agrees to whitelist your origin(s)** (see the support request
-draft below), you can delete the worker entirely and point
+draft below), you can delete whichever relay you deployed and point
 `READYOP_API_BASE_URL` in `config.js` at `READYOP_DIRECT_BASE_URL`
-(`https://tn.readyop.com`).
+(`https://tn.readyop.com`) instead.
 
 ## Setup
 
@@ -67,29 +82,29 @@ tied to client ID `x7YT2DckqrgUfSQf`:
 - Share the app item (and the credentials feature layer) with whichever
   ArcGIS group represents your trusted contact-editors.
 
-### 3. Deploy the Cloudflare Worker relay
+### 3. Deploy the relay
 
-You'll need a (free) Cloudflare account — this wasn't something I could
-provision on your behalf.
-
+**Cloudflare Workers (recommended)** — deliberately kept on its own
+dedicated Cloudflare account, separate from CUSEC's AWS account, so this
+open (no-auth) endpoint doesn't add exposure to infrastructure that runs
+anything else:
 ```bash
 cd cloudflare-worker
-npm install -g wrangler   # one-time
-wrangler login             # opens a browser to authorize
-wrangler deploy
+npx wrangler login    # opens a browser to authorize
+npx wrangler deploy
 ```
-
 Wrangler prints the deployed URL, something like
 `https://readyop-contacts-relay.<your-subdomain>.workers.dev`. Copy that
-into `config.js`'s `READYOP_API_BASE_URL`.
+into `config.js`'s `READYOP_API_BASE_URL`. `ALLOWED_ORIGINS` in
+`worker.js` already has `https://temagis.github.io`, which stays correct
+even once the page is embedded in Experience Builder: a framed page's
+fetch calls still report its own origin, not the parent Experience's
+domain, so there's nothing to add there for the embed itself.
 
-Before deploying, double check `ALLOWED_ORIGINS` in `worker.js` includes:
-- `https://temagis.github.io`
-- whatever domain the app actually loads from once embedded in Experience
-  Builder (Esri experiences are commonly served from
-  `experience.arcgis.com` or an org-specific domain — check the real URL
-  once you've built the experience and add it here, then re-run
-  `wrangler deploy`).
+Use a Cloudflare account created specifically for this (not tied to one
+person's personal login) so the org retains access if whoever set it up
+moves on — worth a line in whatever credential/access documentation CUSEC
+already keeps.
 
 ### 4. Publish the site
 

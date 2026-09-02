@@ -4,7 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ReadyOp Contacts</title>
-  <link rel="stylesheet" href="styles.css" />
+  <!-- The ?v= query string busts the browser's cache on each deploy that
+       changes styles.css/app.js — without it, a browser that already has
+       an old copy cached can keep using it even after you've pushed new
+       files, which looks like "my fix isn't showing up." Bump this value
+       (e.g. to today's date) any time you redeploy changed CSS/JS. -->
+  <link rel="stylesheet" href="styles.css?v=20260902c" />
 </head>
 <body>
   <!-- ════════════════════════════════════════════════════════════
@@ -67,19 +72,20 @@
   <main id="app-screen" class="app-layout" hidden>
     <section class="list-pane">
       <form id="search-form" class="search-form">
-        <input name="First" placeholder="First name" />
-        <input name="Last" placeholder="Last name" />
-        <input name="Organization" placeholder="Organization" />
-        <input name="Tags" placeholder="Tags" />
-        <select name="Region" id="region-filter" aria-label="Region">
-          <option value="">All regions</option>
-        </select>
+        <input name="First" placeholder="First name" autocomplete="off" />
+        <input name="Last" placeholder="Last name" autocomplete="off" />
+        <input name="Organization" placeholder="Organization" autocomplete="off" />
+        <input name="Tags" placeholder="Tags" autocomplete="off" />
+        <button type="button" id="filter-toggle-btn" class="filter-btn" aria-expanded="false" aria-controls="region-drawer">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+          Filter by Region
+        </button>
         <button type="submit">Search</button>
       </form>
+      <div class="active-filters" id="active-filters" aria-label="Active filters" aria-live="polite"></div>
       <ul id="contact-list"></ul>
       <div class="list-footer">
         <span id="pager-info"></span>
-        <button id="load-more-btn" type="button" hidden>Load more</button>
       </div>
     </section>
 
@@ -201,6 +207,25 @@
     </section>
   </main>
 
-  <script type="module" src="app.js"></script>
+  <!-- ════════════════════════════════════════════════════════════
+       REGION FILTER DRAWER
+       Same slide-up drawer / pill-button pattern as the sibling PREDS
+       app's filter drawer, for visual consistency. Region is a
+       single-select (unlike PREDS's multi-select damage-level filter),
+       so picking a pill closes the drawer immediately — same behavior
+       PREDS uses for its own single-select filters (distance, zone).
+       The pill row itself is built in app.js from CONFIG.REGION_OPTIONS.
+       ════════════════════════════════════════════════════════════ -->
+  <div id="region-drawer" aria-hidden="true" inert>
+    <div class="filter-drawer-header">
+      <div class="filter-drawer-title">Filter by Region</div>
+      <button type="button" class="filter-drawer-close" id="region-drawer-close" aria-label="Close filters">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+      </button>
+    </div>
+    <div class="buf-row" id="region-pill-row" role="group" aria-label="Filter by region"></div>
+  </div>
+
+  <script type="module" src="app.js?v=20260902c"></script>
 </body>
 </html>

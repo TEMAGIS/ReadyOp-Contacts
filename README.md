@@ -143,20 +143,28 @@ keep that.
   city/state/zip, fax — visible in your agency's Roster columns) aren't
   in the edit form yet. Easy to add if you want them editable here too.
 
-## List behavior: infinite scroll
+## List behavior: continuous scroll
 
-The contact list loads 100 at a time (`CONFIG.PAGE_SIZE`) and automatically
-loads the next page as you scroll near the bottom of the list; a "Load
-more" button is also always available as a fallback for anyone who'd
-rather click than scroll. This replaced the earlier Prev/Next pager.
+The contact list loads 100 at a time (`CONFIG.PAGE_SIZE`) and
+automatically loads the next page as you scroll near the bottom — no
+"Load more" button; if the first page doesn't even fill the visible list
+(e.g. a tall window), it keeps auto-loading further pages on its own
+until there's actually something to scroll against.
 
 ## Region filter
 
-The search form includes a Region dropdown (West / Middle / Southeast /
-East). ReadyOp's REST API has no native "Region" field or a documented
-way to filter by one server-side — in this agency's roster, Region turned
-out to be one of ReadyOp's ten generic custom columns, exposed by the API
-as the JSON field `"Custom 8"` (confirmed from a live API response; see
+The Region filter (West / Middle / Southeast / East) uses the same
+filter-button + slide-up-drawer + pill pattern as the sibling PREDS app,
+for visual consistency across CUSEC/TEMA apps: a "Filter by Region"
+button above the contact list opens a drawer of region pills; picking one
+closes the drawer, shows a removable "Region: West ×" chip above the
+list, and highlights the Filter button itself. This replaced an earlier
+plain `<select>`.
+
+ReadyOp's REST API has no native "Region" field or a documented way to
+filter by one server-side — in this agency's roster, Region turned out to
+be one of ReadyOp's ten generic custom columns, exposed by the API as the
+JSON field `"Custom 8"` (confirmed from a live API response; see
 `CONFIG.REGION_FIELD` in `config.js`). Because there's no confirmed
 server-side filter parameter for it, selecting a Region scans the whole
 roster (or the whole result of any First/Last/Organization/Tags filters
@@ -169,6 +177,18 @@ still matches the "Southeast" option.
 If your agency ever renumbers or relabels its custom fields (Menu →
 Access → Manage Access → Agencies → double-click the agency → Modify
 Agency), update `REGION_FIELD` in `config.js` to match.
+
+## If a change you deployed doesn't seem to show up
+
+`index.html` loads `styles.css` and `app.js` with a `?v=...` query string
+specifically so browsers don't keep serving an old cached copy after
+you've pushed new files. **Bump that version string** (both occurrences,
+near the top of `index.html`) any time you redeploy changed CSS or JS —
+otherwise a browser that already cached the old files may keep using
+them, which looks exactly like "my fix isn't showing up" even though the
+new files are live on GitHub Pages. If you ever see this happen despite a
+version bump, a hard refresh (Ctrl+Shift+R / Cmd+Shift+R) or an
+incognito/private window rules out caching entirely.
 
 ## Testing without touching production data
 

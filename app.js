@@ -12,8 +12,7 @@ const statusBar = $("#status-bar");
 const contactList = $("#contact-list");
 const searchForm = $("#search-form");
 const pagerInfo = $("#pager-info");
-const prevPageBtn = $("#prev-page");
-const nextPageBtn = $("#next-page");
+const loadMoreBtn = $("#load-more-btn");
 const editPanel = $("#edit-panel");
 const editForm = $("#edit-form");
 const editEmptyState = $("#edit-empty-state");
@@ -22,9 +21,15 @@ const oauthFallback = $("#oauth-fallback");
 const oauthSignInBtn = $("#sign-in-btn");
 
 let creds = null;
-let currentPage = 0;
-let totalPages = 1;
 let selectedContactId = null;
+
+// Infinite-scroll list state
+let nextPageToLoad = 0;
+let totalPages = 1;
+let totalResults = 0;
+let loadedCount = 0;
+let isLoadingMore = false;
+let hasLoggedSample = false;
 
 function setStatus(message, isError = false) {
   statusBar.textContent = message || "";
@@ -119,7 +124,7 @@ async function enterApp() {
 
   appScreen.hidden = false;
   setStatus("");
-  await loadPage(0);
+  await resetAndLoadList();
 }
 
 function currentFilters() {
@@ -131,29 +136,70 @@ function currentFilters() {
   return filters;
 }
 
-async function loadPage(page) {
+/** Clears the list and loads the first page — call on initial load or when the search filters change. */
+async function resetAndLoadList() {
+  nextPageToLoad = 0;
+  totalPages = 1;
+  totalResults = 0;
+  loadedCount = 0;
+  contactList.innerHTML = "";
+  updateListFooter();
+  await loadMoreContacts();
+}
+
+/** Fetches the next page of the current filtered search and appends it to the list. Safe to call repeatedly (e.g. from a scroll handler) — no-ops while a load is already in flight or no pages remain. */
+async function loadMoreContacts() {
+  if (isLoadingMore || nextPageToLoad >= totalPages) return;
+  isLoadingMore = true;
+  loadMoreBtn.disabled = true;
   setStatus("Loading contacts…");
   try {
     const result = await listContacts(creds, {
-      page,
+      page: nextPageToLoad,
       pageSize: CONFIG.PAGE_SIZE,
       filters: currentFilters(),
     });
-    currentPage = result.Page ?? page;
+    const contacts = result.Contacts || [];
+
+    // One-time diagnostic: dump the first contact's full raw record and
+    // field names to the console. Open DevTools (F12) → Console to see
+    // exactly what ReadyOp returns — useful for confirming which
+    // Custom_1–10 field (if any) holds county/region data before wiring
+    // up a region filter against it.
+    if (!hasLoggedSample && contacts.length) {
+      hasLoggedSample = true;
+      console.info("[ReadyOp Contacts] sample raw contact record:", contacts[0]);
+      console.info("[ReadyOp Contacts] field names on that record:", Object.keys(contacts[0]));
+    }
+
     totalPages = result.Pages ?? 1;
-    renderContactList(result.Contacts || []);
-    pagerInfo.textContent = `Page ${currentPage + 1} of ${Math.max(totalPages, 1)} (${result.Total_Results ?? 0} contacts)`;
-    prevPageBtn.disabled = currentPage <= 0;
-    nextPageBtn.disabled = currentPage + 1 >= totalPages;
+    totalResults = result.Total_Results ?? contacts.length;
+    nextPageToLoad = (result.Page ?? nextPageToLoad) + 1;
+    loadedCount += contacts.length;
+    appendContactRows(contacts);
     setStatus("");
   } catch (err) {
     setStatus(`Failed to load contacts: ${err.message}`, true);
+  } finally {
+    isLoadingMore = false;
+    updateListFooter();
   }
 }
 
-function renderContactList(contacts) {
-  contactList.innerHTML = "";
-  if (contacts.length === 0) {
+function updateListFooter() {
+  const hasMore = nextPageToLoad < totalPages;
+  if (loadedCount === 0) {
+    pagerInfo.textContent = isLoadingMore ? "Loading…" : "";
+  } else {
+    pagerInfo.textContent = `${loadedCount} of ${totalResults} contacts`;
+  }
+  loadMoreBtn.hidden = !hasMore;
+  loadMoreBtn.disabled = isLoadingMore;
+  loadMoreBtn.textContent = isLoadingMore ? "Loading…" : "Load more";
+}
+
+function appendContactRows(contacts) {
+  if (contactList.children.length === 0 && contacts.length === 0) {
     contactList.innerHTML = `<li class="empty">No contacts match your search.</li>`;
     return;
   }
@@ -172,11 +218,20 @@ function renderContactList(contacts) {
 
 searchForm.addEventListener("submit", (e) => {
   e.preventDefault();
-  loadPage(0);
+  resetAndLoadList();
 });
 
-prevPageBtn.addEventListener("click", () => loadPage(currentPage - 1));
-nextPageBtn.addEventListener("click", () => loadPage(currentPage + 1));
+loadMoreBtn.addEventListener("click", () => loadMoreContacts());
+
+// Auto-load the next page once the user scrolls near the bottom of the
+// list — the "Load more" button stays as a visible, keyboard-reachable
+// fallback for anyone who'd rather click than scroll.
+const SCROLL_LOAD_THRESHOLD_PX = 200;
+contactList.addEventListener("scroll", () => {
+  const distanceFromBottom =
+    contactList.scrollHeight - contactList.scrollTop - contactList.clientHeight;
+  if (distanceFromBottom < SCROLL_LOAD_THRESHOLD_PX) loadMoreContacts();
+});
 
 async function selectContact(contactId) {
   selectedContactId = contactId;
@@ -248,11 +303,22 @@ editForm.addEventListener("submit", async (e) => {
   try {
     await updateContact(creds, contactId, fields);
     setStatus("Saved.");
-    await loadPage(currentPage);
+    // Refresh just this row's name/sub-line in place rather than
+    // reloading the whole (possibly long, scrolled) list.
+    updateContactRowText(contactId, fields);
   } catch (err) {
     setStatus(`Save failed: ${err.message}`, true);
   }
 });
+
+function updateContactRowText(contactId, fields) {
+  const row = contactList.querySelector(`.contact-row[data-contact-id="${CSS.escape(String(contactId))}"]`);
+  if (!row) return;
+  const name = [fields.First, fields.Last].filter(Boolean).join(" ") || "(no name)";
+  const sub = [fields.Organization, fields.Title].filter(Boolean).join(" — ");
+  row.querySelector(".name").textContent = name;
+  row.querySelector(".sub").textContent = sub;
+}
 
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (c) => ({

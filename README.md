@@ -141,6 +141,37 @@ keep that.
 - **Custom_1–10 fields** — the API client and edit form don't surface these
   yet since I don't know what you're using them for. Easy to add once you
   tell me which custom columns matter.
+- **Region filter (West / Middle / Southeast / East)** — requested, but
+  blocked on knowing which ReadyOp field actually holds the region value.
+  See "Finding the region field" below.
+
+## List behavior: infinite scroll
+
+The contact list loads 100 at a time (`CONFIG.PAGE_SIZE`) and automatically
+loads the next page as you scroll near the bottom of the list; a "Load
+more" button is also always available as a fallback for anyone who'd
+rather click than scroll. This replaced the earlier Prev/Next pager.
+
+## Finding the region field
+
+ReadyOp's documented Contact schema has no built-in "county" or "region"
+field — organizations that use those typically store them in one of the
+generic `Custom_1` through `Custom_10` fields. To find out which one (if
+any) your ReadyOp setup uses:
+
+1. Open the deployed app and sign in.
+2. Open the browser's DevTools (F12, or right-click → Inspect) and go to
+   the **Console** tab.
+3. The app logs the first loaded contact's full raw record and its field
+   names there automatically (look for lines starting
+   `[ReadyOp Contacts]`).
+4. Check whether a `Custom_N` field (or any other field) holds a
+   West/Middle/Southeast/East-style value.
+
+Once you report back the field name (and the exact value strings ReadyOp
+uses for each region), the Region filter can be wired up as a dropdown or
+button group in the search form, filtering server-side via that
+`Custom_N` parameter on the Contacts search endpoint.
 
 ## Testing without touching production data
 

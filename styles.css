@@ -298,7 +298,13 @@ button[type="submit"] { background: var(--accent); color: #fff; border-color: va
   color: rgba(255, 255, 255, 0.75);
   white-space: nowrap;
 }
-.topbar-buf-row { margin-bottom: 0; }
+/* Two classes (not one) so this reliably beats the later, plain
+   `.buf-row { margin-bottom: 18px }` rule regardless of source order —
+   a same-specificity single-class override had been silently losing
+   that fight, leaving the 18px bottom margin on the pill row, which
+   inflated the Region group's height and pushed County (and its
+   "COUNTY" label) down out of line with it. */
+.topbar-filters .topbar-buf-row { margin-bottom: 0; }
 .topbar-combo { width: 210px; flex: 0 0 210px; }
 /* .buft (pill buttons) and .combo-input render at noticeably different
    natural heights — the input's own padding/border added up to several
@@ -560,8 +566,11 @@ legend {
    .form-columns — see there and the fieldset.public-contact-fieldset
    rule below), rather than after the whole form — so it stretches to
    that row's height by default grid behavior; align-items centers the
-   button within it instead of pinning it to the top. */
-.form-actions { display: flex; align-items: center; justify-content: flex-end; }
+   button within it instead of pinning it to the top. Left-justified
+   (not flex-end) so the button sits right next to the Public Contact
+   box instead of stranded at the far right edge of its (roughly
+   half-form-width) grid column. */
+.form-actions { display: flex; align-items: center; justify-content: flex-start; }
 .form-actions button[type="submit"] {
   background: var(--tema-blue);
   border-color: var(--tema-blue);

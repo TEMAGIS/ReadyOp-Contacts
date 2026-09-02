@@ -9,7 +9,7 @@
        an old copy cached can keep using it even after you've pushed new
        files, which looks like "my fix isn't showing up." Bump this value
        (e.g. to today's date) any time you redeploy changed CSS/JS. -->
-  <link rel="stylesheet" href="styles.css?v=20260902q" />
+  <link rel="stylesheet" href="styles.css?v=20260902s" />
 </head>
 <body>
   <!-- ════════════════════════════════════════════════════════════
@@ -170,7 +170,7 @@
                 <input type="hidden" name="Tags" id="tags-hidden" />
               </div>
               <label>PIN <input name="PIN" /></label>
-              <label>County <input name="County" list="county-datalist" placeholder="e.g. Davidson" /></label>
+              <label>Fax <input name="Fax" /></label>
             </fieldset>
             <datalist id="county-datalist"></datalist>
 
@@ -181,6 +181,7 @@
                  nothing address-related is split across two fieldsets. -->
             <fieldset class="form-col" id="address-fieldset">
               <legend>Address</legend>
+              <label>County <input name="County" list="county-datalist" placeholder="e.g. Davidson" /></label>
               <label>Region
                 <select name="Region" id="edit-region-select">
                   <option value="">—</option>
@@ -191,7 +192,6 @@
               <label>City <input name="City" /></label>
               <label>State <input name="State" maxlength="2" placeholder="TN" /></label>
               <label>Zip <input name="Zip" /></label>
-              <label>Fax <input name="Fax" /></label>
             </fieldset>
 
             <!-- Phones/Emails share this same 2-column grid (instead of
@@ -309,6 +309,6 @@
     </section>
   </main>
 
-  <script type="module" src="app.js?v=20260902q"></script>
+  <script type="module" src="app.js?v=20260902s"></script>
 </body>
 </html>

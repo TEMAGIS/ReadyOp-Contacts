@@ -275,6 +275,22 @@ control's own natural padding/border added up to noticeably different
 heights otherwise (the combobox came out a few pixels taller), which
 looked uneven side by side.
 
+That height fix alone wasn't enough to make the two groups actually line
+up, though — the pill row (`.buf-row`, a class shared with the sibling
+PREDS app's drawer styling) carries an 18px `margin-bottom`, meant to be
+zeroed out in the header via a `.topbar-buf-row { margin-bottom: 0 }`
+override. Both rules have the same specificity (one class each), and
+`.buf-row` happens to be declared *later* in `styles.css`, so on equal
+specificity it was winning the cascade and the override was silently
+never applying. That leftover 18px inflated the whole Region group's
+height, which pushed County — sized to its actual content, no phantom
+margin — down to stay vertically centered against it, so "REGION" and
+"COUNTY" (and their pill row/combobox) ended up on two different
+baselines despite both being "centered." Fixed by giving the override
+two classes (`.topbar-filters .topbar-buf-row`) so it wins regardless of
+declaration order, rather than relying on being lucky about which rule
+happens to come last in the file.
+
 **Region narrows County:** once a Region is selected, the County
 combobox only offers counties that actually appear under that Region in
 the loaded roster (built from the same roster fetch, in
@@ -334,15 +350,19 @@ to a single column (all sections stacked, in that same top-to-bottom
 order), since there isn't room for two fieldsets side by side without
 cramming each Phone/Email row's number+type+checkbox trio.
 
-**"Address" groups every address-related field together, Region on
+**"Address" groups every address-related field together, County on
 top.** This section used to be called "Other Information" and held a mix
 of address fields plus Region; it's renamed to **Address**, and the
 **Address** field itself (previously all the way up in General Info) now
 lives here too, so nothing address-related is split across two
-fieldsets. Within it, the reading order is **Region**, **Address**,
-**Address 2**, **City**, **State**, **Zip**, **Fax** — Region first
-since it's the broadest grouping (which part of the state), then the
-street-level fields.
+fieldsets. Within it, the reading order is **County**, **Region**,
+**Address**, **Address 2**, **City**, **State**, **Zip** — County first
+(the broadest geographic grouping), then Region, then the street-level
+fields. **Fax moved the other way**, out of Address and down to the
+bottom of **General Info** (after PIN) — both were pure field-reordering
+requests, and since every input keeps its original `name`/`id`,
+`populateEditForm()` and the submit handler (which read/write by name,
+not position) needed no changes.
 
 **"Public Contact" sits first, in its own top-left section, with Save
 changes beside it.** The "Share with public" checkbox (originally
@@ -355,11 +375,16 @@ form now, rather than buried below General Info/Address, since it's
 checked on a lot of contacts in a row. It briefly spanned the full width
 of the form; it's now constrained to just the top-left grid cell instead,
 with the **Save changes** button moved up out of its old spot below
-every other field and into the top-right cell beside it (right-justified
-within that cell via `.form-actions { justify-content: flex-end }`, same
-as before) — so the field you check most often and the button you click
-to save it are both visible together, without scrolling past General
-Info/Address/Phones/Emails first. The checkbox itself is also bigger and
+every other field and into the top-right cell beside it — so the field
+you check most often and the button you click to save it are both
+visible together, without scrolling past General Info/Address/Phones/
+Emails first. That top-right cell is roughly half the form's width, and
+the button was originally right-justified within it
+(`.form-actions { justify-content: flex-end }`), which left it stranded
+at the far right edge with a wide empty gap between it and the Public
+Contact box beside it — it's now left-justified
+(`justify-content: flex-start`) so it sits right next to Public Contact
+instead. The checkbox itself is also bigger and
 styled as its own clickable row (a bordered card with a larger checkbox,
 `accent-color: var(--tema-blue)`) rather than a plain inline
 checkbox+label, for the same reason.

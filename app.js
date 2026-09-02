@@ -1,7 +1,7 @@
-import { CONFIG } from "./config.js?v=20260902q";
-import * as auth from "./arcgis-auth.js?v=20260902q";
-import { getReadyOpCredentials, clearCredentialsCache } from "./credentials.js?v=20260902q";
-import { listContacts, getContact, updateContact } from "./readyop-client.js?v=20260902q";
+import { CONFIG } from "./config.js?v=20260902s";
+import * as auth from "./arcgis-auth.js?v=20260902s";
+import { getReadyOpCredentials, clearCredentialsCache } from "./credentials.js?v=20260902s";
+import { listContacts, getContact, updateContact } from "./readyop-client.js?v=20260902s";
 
 const $ = (sel) => document.querySelector(sel);
 

@@ -73,12 +73,14 @@ tied to client ID `x7YT2DckqrgUfSQf`:
 - Add `https://temagis.github.io/ReadyOp-Contacts/` as a **Redirect URI**.
 - Since sign-in uses a popup (`popup: true` in `arcgis-auth.js`, required so
   the OAuth flow doesn't navigate away from the Experience Builder iframe),
-  also confirm the popup callback flow is allowed — by default the app
-  relies on Esri's own hosted callback page
-  (`https://js.arcgis.com/<version>/oauth-callback.html`), which Esri's SDK
-  handles without any extra registration on your part. If you see a redirect
-  URI mismatch error during testing, add that exact URL as an additional
-  Redirect URI.
+  the SDK needs `oauth-callback.html` (included at the project root) to
+  exist right next to `index.html` — that's the page the popup lands on
+  after you approve sign-in; it hands the result back to the main window
+  and closes itself. It's Esri's standard file
+  (from [Esri/jsapi-resources](https://github.com/Esri/jsapi-resources/blob/main/oauth/oauth-callback.html)),
+  unmodified — nothing to edit in it. Make sure it's pushed to the repo
+  alongside everything else, at
+  `https://temagis.github.io/ReadyOp-Contacts/oauth-callback.html`.
 - Share the app item (and the credentials feature layer) with whichever
   ArcGIS group represents your trusted contact-editors.
 

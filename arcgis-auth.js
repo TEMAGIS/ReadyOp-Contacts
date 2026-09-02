@@ -26,8 +26,9 @@ const [{ default: OAuthInfo }, { default: IdentityManager }] = await Promise.all
 
 // popup:true keeps the sign-in flow in a popup window instead of navigating
 // this page away — required when embedded in an Experience Builder iframe.
-// popupCallbackUrl is left unset so the SDK uses Esri's own hosted callback
-// page; see README for exactly what to register as a Redirect URI.
+// popupCallbackUrl is left unset, so the SDK defaults to
+// "<this app's folder>/oauth-callback.html" — that file is included at the
+// project root; see README for the Redirect URI to register.
 const info = new OAuthInfo({
   appId: CONFIG.ARCGIS_APP_ID,
   portalUrl: CONFIG.ARCGIS_PORTAL_URL,

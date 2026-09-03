@@ -581,6 +581,8 @@ legend {
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1.1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
 }
 .edit-toolbar-title-block { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
 .edit-toolbar-title {
@@ -694,9 +696,14 @@ legend {
    Public") + this field need to actually fit side by side in that
    narrower space instead of wrapping onto a second line. */
 .public-contact-row .public-checkbox-field { flex: 0 1 auto; }
+/* flex:0 (not 1) and a max-width -- since the Public Contact fieldset
+   now spans the full form width (see fieldset.public-contact-fieldset
+   above), a flex-growing phone field would stretch to fill that whole
+   row instead of staying a normal phone-number-sized input. */
 .public-contact-row .public-phone-field {
-  flex: 1 1 160px;
+  flex: 0 1 240px;
   min-width: 150px;
+  max-width: 260px;
   margin-bottom: 0;
 }
 /* Bigger touch/click target and a bigger checkbox than the standard

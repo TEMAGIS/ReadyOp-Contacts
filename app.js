@@ -711,14 +711,12 @@ function updateAddressLabelPreview() {
   const zip = editForm.Zip.value.trim();
 
   const lines = [];
-  const name = [first, last].filter(Boolean).join(" ");
-  if (name) lines.push(name);
-  // Same "Organization — Title" convention the contact list's row
-  // subtitle already uses (see contactDisplayName()'s neighbor,
-  // appendContactRows()'s `sub` line) — one line instead of Title
-  // needing its own.
-  const orgLine = [org, title].filter(Boolean).join(" — ");
-  if (orgLine) lines.push(orgLine);
+  // "Name, Title" on its own line, Organization on the one below it --
+  // e.g. "Chris Adams, EMA Director" / "Hamilton County EMA" -- rather
+  // than pairing Title with Organization.
+  const nameLine = [[first, last].filter(Boolean).join(" "), title].filter(Boolean).join(", ");
+  if (nameLine) lines.push(nameLine);
+  if (org) lines.push(org);
   if (addr1) lines.push(addr1);
   if (addr2) lines.push(addr2);
 

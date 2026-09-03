@@ -512,6 +512,15 @@ fieldset {
   background: #fff;
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
+/* The Mailing Address Label fieldset lays out as a flex column so its
+   .address-label child (flex: 1) can actually fill the fieldset's full
+   height -- which the grid row stretches to match Public Contact next
+   to it (grid's default row alignment is stretch) -- instead of just
+   hugging its own min-height while the fieldset box grows around it. */
+#address-label-fieldset {
+  display: flex;
+  flex-direction: column;
+}
 legend {
   font-weight: 700;
   font-size: 0.78rem;
@@ -644,20 +653,15 @@ legend {
 #edit-form input:disabled { background: #f1f3f5; color: #9aa3ad; cursor: not-allowed; }
 
 /* ── "Public Contact" section (Share-Public checkbox + Public Phone) ──
-   Broken out of Other Information into its own section, constrained to
-   the top-left cell of .form-columns' 2-column grid (Save changes sits
-   beside it in the top-right cell — see .form-actions above) and
-   visually called out with a tinted background/border, since whoever's
-   editing needs to spot and check this on a lot of contacts in a row
-   rather than hunt for one line among a dozen other fields. */
+   Broken out of Other Information into its own section, paired with the
+   Mailing Address Label fieldset beside it in the grid's first row --
+   same top-left/top-right pairing pattern as General Info/Address below
+   it -- and visually called out with a tinted background/border, since
+   whoever's editing needs to spot and check this on a lot of contacts in
+   a row rather than hunt for one line among a dozen other fields. */
 #edit-form fieldset.public-contact-fieldset {
   background: #eef3fb;
   border-color: var(--tema-blue);
-  /* Now the only thing in the grid's first row (Save changes moved up
-     into .edit-toolbar), so it spans both columns instead of pairing
-     with a partner cell -- General Info/Address still pair up on the
-     row after it. */
-  grid-column: 1 / -1;
 }
 /* flex-start (not center) — both fields now start with a same-style
    label line ("Sharing" / "Public Facing Phone Number") above their
@@ -689,36 +693,22 @@ legend {
   color: var(--text-muted);
   margin-bottom: 0.2rem;
 }
-/* Public Contact is now constrained to a single grid column (about half
-   the form's width — see fieldset.public-contact-fieldset) rather than
-   spanning full-width, so this field's basis/min-width came down too —
-   a "Share with public" (shortened from "Share this contact with
-   Public") + this field need to actually fit side by side in that
-   narrower space instead of wrapping onto a second line. */
 .public-contact-row .public-checkbox-field { flex: 0 1 auto; }
-/* flex:0 (not 1) and a max-width -- since the Public Contact fieldset
-   now spans the full form width (see fieldset.public-contact-fieldset
-   above), a flex-growing phone field would stretch to fill that whole
-   row instead of staying a normal phone-number-sized input. */
 .public-contact-row .public-phone-field {
-  flex: 0 1 240px;
+  flex: 1 1 160px;
   min-width: 150px;
-  max-width: 260px;
-  margin-bottom: 0;
-}
-/* Grows to soak up whatever space the checkbox + phone field (both
-   capped-width now) leave behind in the full-width Public Contact row. */
-.public-contact-row .address-label-field {
-  flex: 1 1 220px;
-  min-width: 200px;
   margin-bottom: 0;
 }
 /* Read-only text, not a form control -- dashed border (instead of the
-   inputs' solid border) and a serif-free monospace-ish stack say
-   "preview" rather than "editable field" at a glance. white-space:
-   pre-line turns the \n-joined lines from updateAddressLabelPreview()
-   (see app.js) into an actual multi-line block, like a printed label. */
+   fields' solid border) says "preview" rather than "editable field" at
+   a glance. white-space: pre-line turns the \n-joined lines from
+   updateAddressLabelPreview() (see app.js) into an actual multi-line
+   block, like a printed label. height: 100% + the fieldset's own flex
+   column (see fieldset rule) lets it fill the fieldset -- which the
+   grid row stretches to match Public Contact's height (see
+   .form-columns) -- instead of just hugging its own min-height. */
 .address-label {
+  flex: 1;
   min-height: 74px;
   padding: 0.55rem 0.7rem;
   border: 1px dashed var(--border);

@@ -29,13 +29,14 @@ const tagsChips = $("#tags-chips");
 const tagsInput = $("#tags-input");
 const tagsListbox = $("#tags-listbox");
 const tagsHidden = $("#tags-hidden");
-const saveBtn = $('#edit-form button[type="submit"]');
+const saveBtn = $("#save-btn");
 const activeFiltersBar = $("#active-filters");
 const pagerInfo = $("#pager-info");
 const appLayoutEl = $("#app-screen");
 const editPanel = $("#edit-panel");
 const editForm = $("#edit-form");
 const editBackBtn = $("#edit-back-btn");
+const editSubtitle = $("#edit-subtitle");
 const editEmptyState = $("#edit-empty-state");
 const loginError = $("#login-error");
 const oauthFallback = $("#oauth-fallback");
@@ -800,6 +801,7 @@ async function selectContact(contactId) {
 
 function populateEditForm(c) {
   editForm.dataset.contactId = c["Contact ID"];
+  editSubtitle.textContent = contactDisplayName(c) || "(no name)";
   editForm.First.value = c.First || "";
   editForm.Last.value = c.Last || "";
   editForm.Organization.value = c.Organization || "";

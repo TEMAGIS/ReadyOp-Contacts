@@ -9,7 +9,7 @@
        an old copy cached can keep using it even after you've pushed new
        files, which looks like "my fix isn't showing up." Bump this value
        (e.g. to today's date) any time you redeploy changed CSS/JS. -->
-  <link rel="stylesheet" href="styles.css?v=20260902y" />
+  <link rel="stylesheet" href="styles.css?v=20260903a" />
 </head>
 <body>
   <!-- ════════════════════════════════════════════════════════════
@@ -121,6 +121,20 @@
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
           Back to list
         </button>
+        <!-- Mirrors the header treatment in the edit panel of the
+             Assigned Inventory app: a title/subtitle pair on the left
+             (what you're editing) and Save changes on the right, both
+             in one row above the form -- rather than Save changes living
+             buried in the form grid next to Public Contact. -->
+        <div class="edit-toolbar">
+          <div class="edit-toolbar-title-block">
+            <span class="edit-toolbar-title">Contact</span>
+            <span class="edit-toolbar-subtitle" id="edit-subtitle"></span>
+          </div>
+          <div class="form-actions">
+            <button type="submit" form="edit-form" id="save-btn">Save changes</button>
+          </div>
+        </div>
         <form id="edit-form">
           <!-- Laid out to mirror ReadyOp's own "Modify Contact" dialog:
                two columns instead of one long stack. Public Contact and
@@ -149,10 +163,6 @@
                 </label>
               </div>
             </fieldset>
-
-            <div class="form-actions">
-              <button type="submit">Save changes</button>
-            </div>
 
             <fieldset class="form-col">
               <legend>General Info</legend>
@@ -309,6 +319,6 @@
     </section>
   </main>
 
-  <script type="module" src="app.js?v=20260902y"></script>
+  <script type="module" src="app.js?v=20260903a"></script>
 </body>
 </html>

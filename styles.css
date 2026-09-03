@@ -570,6 +570,37 @@ legend {
    (not flex-end) so the button sits right next to the Public Contact
    box instead of stranded at the far right edge of its (roughly
    half-form-width) grid column. */
+/* Sits above the form: a small uppercase eyebrow ("Contact") over the
+   record's display name, paired with Save changes on the right -- same
+   pattern as the edit-panel header in the Assigned Inventory app. Plain
+   (no card/border), just a flex row on the page background, since the
+   fieldsets below already carry the boxed look. */
+.edit-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+}
+.edit-toolbar-title-block { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
+.edit-toolbar-title {
+  font-weight: 700;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--tema-blue);
+}
+.edit-toolbar-subtitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f1117;
+  letter-spacing: -0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.edit-toolbar .form-actions { flex-shrink: 0; }
+
 .form-actions { display: flex; align-items: center; justify-content: flex-start; }
 .form-actions button[type="submit"] {
   background: var(--tema-blue);
@@ -620,6 +651,11 @@ legend {
 #edit-form fieldset.public-contact-fieldset {
   background: #eef3fb;
   border-color: var(--tema-blue);
+  /* Now the only thing in the grid's first row (Save changes moved up
+     into .edit-toolbar), so it spans both columns instead of pairing
+     with a partner cell -- General Info/Address still pair up on the
+     row after it. */
+  grid-column: 1 / -1;
 }
 /* flex-start (not center) — both fields now start with a same-style
    label line ("Sharing" / "Public Facing Phone Number") above their

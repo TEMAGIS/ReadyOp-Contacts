@@ -9,7 +9,7 @@
        an old copy cached can keep using it even after you've pushed new
        files, which looks like "my fix isn't showing up." Bump this value
        (e.g. to today's date) any time you redeploy changed CSS/JS. -->
-  <link rel="stylesheet" href="styles.css?v=20260903c" />
+  <link rel="stylesheet" href="styles.css?v=20260903d" />
 </head>
 <body>
   <!-- ════════════════════════════════════════════════════════════
@@ -161,6 +161,14 @@
                 <label class="public-phone-field">Public Facing Phone Number
                   <input name="PublicPhone" id="public-phone-input" class="phone-mask" placeholder="(615) 555-1234" inputmode="tel" autocomplete="off" />
                 </label>
+                <!-- Fills the leftover space in this now-full-width fieldset with a
+                     live preview of the mailing address as it'd appear on an
+                     envelope -- plain text, not an input, built from the
+                     Name/Organization/Address fields elsewhere in the form. -->
+                <div class="address-label-field">
+                  <span class="public-contact-field-title">Mailing address label</span>
+                  <div class="address-label" id="address-label-preview" aria-live="polite"></div>
+                </div>
               </div>
             </fieldset>
 
@@ -319,6 +327,6 @@
     </section>
   </main>
 
-  <script type="module" src="app.js?v=20260903c"></script>
+  <script type="module" src="app.js?v=20260903d"></script>
 </body>
 </html>

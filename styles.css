@@ -706,6 +706,30 @@ legend {
   max-width: 260px;
   margin-bottom: 0;
 }
+/* Grows to soak up whatever space the checkbox + phone field (both
+   capped-width now) leave behind in the full-width Public Contact row. */
+.public-contact-row .address-label-field {
+  flex: 1 1 220px;
+  min-width: 200px;
+  margin-bottom: 0;
+}
+/* Read-only text, not a form control -- dashed border (instead of the
+   inputs' solid border) and a serif-free monospace-ish stack say
+   "preview" rather than "editable field" at a glance. white-space:
+   pre-line turns the \n-joined lines from updateAddressLabelPreview()
+   (see app.js) into an actual multi-line block, like a printed label. */
+.address-label {
+  min-height: 74px;
+  padding: 0.55rem 0.7rem;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  background: #fff;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: #1c2126;
+  white-space: pre-line;
+}
+.address-label:empty::before { content: "No address on file"; color: #9aa3ad; }
 /* Bigger touch/click target and a bigger checkbox than the standard
    .checkbox-label — this is the one checked most often, over and over,
    while working through a list of contacts. */

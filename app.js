@@ -22,6 +22,7 @@ const editRegionSelect = $("#edit-region-select");
 const sharePublicCheckbox = $("#share-public-checkbox");
 const sharePublicLabel = $("#share-public-label");
 const publicPhoneInput = $("#public-phone-input");
+const addressLabelPreview = $("#address-label-preview");
 const publicContactFieldset = $(".public-contact-fieldset");
 const addressFieldset = $("#address-fieldset");
 const tagsField = $("#tags-field");
@@ -694,6 +695,40 @@ function contactDisplayName(c) {
   return [c.First, c.Last].filter(Boolean).join(" ").trim();
 }
 
+/** Rebuilds the envelope-style mailing address preview in the Public
+ * Contact section from whatever's currently typed into the form --
+ * plain text, not tied to a save, so it updates live as the user edits
+ * Name/Organization/Address fields rather than only on load. */
+function updateAddressLabelPreview() {
+  const first = editForm.First.value.trim();
+  const last = editForm.Last.value.trim();
+  const org = editForm.Organization.value.trim();
+  const addr1 = editForm.Address.value.trim();
+  const addr2 = editForm.Address2.value.trim();
+  const city = editForm.City.value.trim();
+  const state = editForm.State.value.trim();
+  const zip = editForm.Zip.value.trim();
+
+  const lines = [];
+  const name = [first, last].filter(Boolean).join(" ");
+  if (name) lines.push(name);
+  if (org) lines.push(org);
+  if (addr1) lines.push(addr1);
+  if (addr2) lines.push(addr2);
+
+  let cityLine = city;
+  if (state) cityLine = cityLine ? `${cityLine}, ${state}` : state;
+  if (zip) cityLine = cityLine ? `${cityLine} ${zip}` : zip;
+  if (cityLine) lines.push(cityLine);
+
+  addressLabelPreview.textContent = lines.join("\n");
+}
+
+const ADDRESS_LABEL_FIELDS = ["First", "Last", "Organization", "Address", "Address2", "City", "State", "Zip"];
+for (const fieldName of ADDRESS_LABEL_FIELDS) {
+  editForm[fieldName].addEventListener("input", updateAddressLabelPreview);
+}
+
 /** Re-filters allContacts against the current search/Region/County state, sorts alphabetically by Last name (First name as the tiebreaker when Last matches, e.g. two "Smith"s) — the app doesn't apply any other sort; this is purely a client-side convenience since ReadyOp's API returns contacts in its own, not-alphabetical order — resets the visible list, and renders the first batch. Call whenever the search box, a filter, or the underlying roster changes. */
 function applyFilters() {
   filteredContacts = allContacts.filter(matchesFilters);
@@ -854,6 +889,8 @@ function populateEditForm(c) {
     editForm[`Email_${i}_Address`].value = e.Address || "";
     editForm[`Email_${i}_Type`].value = e.Type || "";
   }
+
+  updateAddressLabelPreview();
 }
 
 editForm.addEventListener("submit", async (e) => {

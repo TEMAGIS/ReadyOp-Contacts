@@ -24,7 +24,7 @@ const sharePublicLabel = $("#share-public-label");
 const publicPhoneInput = $("#public-phone-input");
 const addressLabelPreview = $("#address-label-preview");
 const publicContactFieldset = $(".public-contact-fieldset");
-const addressFieldset = $("#address-fieldset");
+const addressLabelFieldset = $("#address-label-fieldset");
 const tagsField = $("#tags-field");
 const tagsChips = $("#tags-chips");
 const tagsInput = $("#tags-input");
@@ -99,11 +99,11 @@ function applyUnmappedFieldGuards() {
   }
 }
 
-/** Tints the Public Contact and Address sections green (`.is-public` in styles.css) while "Share this contact with Public" is checked — a quick, glanceable "this one's public" signal, since Address (the mailing info actually being shared) sits below Public Contact rather than right next to the checkbox. Called on every checkbox change and once when the edit form loads. */
+/** Tints the Public Contact and Mailing Address Label sections green (`.is-public` in styles.css) while "Share this contact with Public" is checked — a quick, glanceable "this one's public" signal, since the address label (a preview of exactly what's being shared) sits right beside Public Contact. Called on every checkbox change and once when the edit form loads. */
 function syncPublicContactHighlight() {
   const isPublic = sharePublicCheckbox.checked;
   publicContactFieldset.classList.toggle("is-public", isPublic);
-  addressFieldset.classList.toggle("is-public", isPublic);
+  addressLabelFieldset.classList.toggle("is-public", isPublic);
 }
 sharePublicCheckbox.addEventListener("change", syncPublicContactHighlight);
 
@@ -698,11 +698,12 @@ function contactDisplayName(c) {
 /** Rebuilds the envelope-style mailing address preview in the Public
  * Contact section from whatever's currently typed into the form --
  * plain text, not tied to a save, so it updates live as the user edits
- * Name/Organization/Address fields rather than only on load. */
+ * Name/Organization/Title/Address fields rather than only on load. */
 function updateAddressLabelPreview() {
   const first = editForm.First.value.trim();
   const last = editForm.Last.value.trim();
   const org = editForm.Organization.value.trim();
+  const title = editForm.Title.value.trim();
   const addr1 = editForm.Address.value.trim();
   const addr2 = editForm.Address2.value.trim();
   const city = editForm.City.value.trim();
@@ -712,7 +713,12 @@ function updateAddressLabelPreview() {
   const lines = [];
   const name = [first, last].filter(Boolean).join(" ");
   if (name) lines.push(name);
-  if (org) lines.push(org);
+  // Same "Organization — Title" convention the contact list's row
+  // subtitle already uses (see contactDisplayName()'s neighbor,
+  // appendContactRows()'s `sub` line) — one line instead of Title
+  // needing its own.
+  const orgLine = [org, title].filter(Boolean).join(" — ");
+  if (orgLine) lines.push(orgLine);
   if (addr1) lines.push(addr1);
   if (addr2) lines.push(addr2);
 
@@ -724,7 +730,7 @@ function updateAddressLabelPreview() {
   addressLabelPreview.textContent = lines.join("\n");
 }
 
-const ADDRESS_LABEL_FIELDS = ["First", "Last", "Organization", "Address", "Address2", "City", "State", "Zip"];
+const ADDRESS_LABEL_FIELDS = ["First", "Last", "Organization", "Title", "Address", "Address2", "City", "State", "Zip"];
 for (const fieldName of ADDRESS_LABEL_FIELDS) {
   editForm[fieldName].addEventListener("input", updateAddressLabelPreview);
 }

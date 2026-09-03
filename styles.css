@@ -720,9 +720,15 @@ legend {
   white-space: pre-line;
 }
 .address-label:empty::before { content: "No address on file"; color: #9aa3ad; }
-/* Bigger touch/click target and a bigger checkbox than the standard
-   .checkbox-label — this is the one checked most often, over and over,
-   while working through a list of contacts. */
+/* Bigger click target than the standard .checkbox-label — this is the
+   one checked most often, over and over, while working through a list
+   of contacts -- but matched to the SAME box height as the phone input
+   beside it (vertical padding, border width, and the checkbox icon size
+   below are all sized to land at the same ~31px total height as
+   #edit-form's standard text input), so the two sit level at both top
+   AND bottom instead of just the top. It's not the bold text throwing
+   this off — bold doesn't add height — it was the extra padding/border/
+   checkbox-icon size this pill carried on top of the input's box. */
 #edit-form label.checkbox-label.public-checkbox {
   /* Cancels the 0.1rem margin-top every .checkbox-label gets by default
      -- combined with .public-contact-field-title's margin-bottom above,
@@ -730,8 +736,8 @@ legend {
      with the phone input beside it. */
   margin-top: 0;
   gap: 0.6rem;
-  padding: 0.55rem 0.85rem;
-  border: 1.5px solid var(--border);
+  padding: 0.4rem 0.85rem;
+  border: 1px solid var(--border);
   border-radius: 8px;
   background: #fff;
   font-size: 0.92rem;
@@ -742,8 +748,8 @@ legend {
 }
 #edit-form label.checkbox-label.public-checkbox:hover { border-color: var(--tema-blue); }
 #edit-form label.checkbox-label.public-checkbox input[type="checkbox"] {
-  width: 19px;
-  height: 19px;
+  width: 16px;
+  height: 16px;
   accent-color: var(--tema-blue);
   cursor: pointer;
 }
@@ -753,12 +759,11 @@ legend {
 }
 
 /* When "Share this contact with Public" is checked, tint both this
-   section AND the Address section green (`.is-public`, toggled in
-   app.js by syncPublicContactHighlight() — on checkbox change and when
-   the edit form loads) — a quick, glanceable "this one's public" signal
-   that doesn't require scrolling back up to re-check the checkbox,
-   since Address sits below Public Contact and its own fields (mailing
-   address, etc.) are exactly the kind of info being shared. */
+   section AND the Mailing Address Label fieldset beside it green
+   (`.is-public`, toggled in app.js by syncPublicContactHighlight() — on
+   checkbox change and when the edit form loads) — a quick, glanceable
+   "this one's public" signal on exactly the preview of what's being
+   shared, without tinting the actual editable Address fields below. */
 #edit-form fieldset.is-public {
   background: #e9f7ee;
   border-color: #1a7f37;

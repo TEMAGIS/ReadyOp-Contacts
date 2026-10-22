@@ -107,6 +107,10 @@ export const CONFIG = {
   // leave blank)", Custom 10 = "Public Facing Phone Number".
   SHARE_PUBLIC_FIELD: "Custom 9",
   PUBLIC_PHONE_FIELD: "Custom 10",
+  // Added 2026-10-22: "Public Facing Email" (a new Custom 11 field added in
+  // ReadyOp's Contact Fields admin screen). Shown to the public by the
+  // public directory exactly like the public phone number.
+  PUBLIC_EMAIL_FIELD: "Custom 11",
   // The County filter's options are NOT hardcoded — they're derived from
   // whatever distinct values actually appear in COUNTY_FIELD across the
   // loaded roster, sorted alphabetically. That also means inconsistent

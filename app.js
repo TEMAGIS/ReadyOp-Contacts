@@ -1,4 +1,4 @@
-import { CONFIG } from "./config.js?v=20260902y";
+import { CONFIG } from "./config.js?v=20260904a";
 import * as auth from "./arcgis-auth.js?v=20260902y";
 import { getReadyOpCredentials, clearCredentialsCache } from "./credentials.js?v=20260902y";
 import { listContacts, getContact, updateContact } from "./readyop-client.js?v=20260902y";
@@ -22,6 +22,7 @@ const editRegionSelect = $("#edit-region-select");
 const sharePublicCheckbox = $("#share-public-checkbox");
 const sharePublicLabel = $("#share-public-label");
 const publicPhoneInput = $("#public-phone-input");
+const publicEmailInput = $("#public-email-input");
 const addressLabelPreview = $("#address-label-preview");
 const publicContactFieldset = $(".public-contact-fieldset");
 const addressLabelFieldset = $("#address-label-fieldset");
@@ -96,6 +97,11 @@ function applyUnmappedFieldGuards() {
     publicPhoneInput.disabled = true;
     publicPhoneInput.placeholder = "Not available yet";
     publicPhoneInput.title = "Field mapping not yet identified — see PUBLIC_PHONE_FIELD in config.js";
+  }
+  if (!CONFIG.PUBLIC_EMAIL_FIELD) {
+    publicEmailInput.disabled = true;
+    publicEmailInput.placeholder = "Not available yet";
+    publicEmailInput.title = "Field mapping not yet identified — see PUBLIC_EMAIL_FIELD in config.js";
   }
 }
 
@@ -873,6 +879,9 @@ function populateEditForm(c) {
   if (CONFIG.PUBLIC_PHONE_FIELD) {
     editForm.PublicPhone.value = formatPhoneNumber(c[CONFIG.PUBLIC_PHONE_FIELD] || "");
   }
+  if (CONFIG.PUBLIC_EMAIL_FIELD) {
+    editForm.PublicEmail.value = (c[CONFIG.PUBLIC_EMAIL_FIELD] || "").trim();
+  }
   syncPublicContactHighlight();
 
   // Reformats whatever's already on file (e.g. ReadyOp's own
@@ -923,6 +932,9 @@ editForm.addEventListener("submit", async (e) => {
   }
   if (CONFIG.PUBLIC_PHONE_FIELD) {
     fields[CONFIG.PUBLIC_PHONE_FIELD] = data.get("PublicPhone") || "";
+  }
+  if (CONFIG.PUBLIC_EMAIL_FIELD) {
+    fields[CONFIG.PUBLIC_EMAIL_FIELD] = (data.get("PublicEmail") || "").trim();
   }
   for (let i = 0; i < 5; i++) {
     const number = data.get(`Phone_${i}_Number`);

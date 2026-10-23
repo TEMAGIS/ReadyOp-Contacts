@@ -60,7 +60,9 @@ const regionToCounties = new Map(); // region name (lowercased) -> Set of counti
 
 // --- Search + filters ---
 let searchTerm = "";
-let activeRegion = ""; // "" = no Region filter
+// Sentinel value for the "No region" pill: contacts whose Region field is blank. (Lowercase on purpose: regionToCounties keys are lowercased region names.)
+const NO_REGION = "__none__";
+let activeRegion = ""; // "" = no Region filter; NO_REGION = contacts with no Region set
 let activeCounty = ""; // "" = no County filter
 let activePublic = ""; // "" = all, "yes" = shared with public, "no" = not shared
 let countyHighlightIndex = -1; // keyboard nav position in the open county combobox listbox
@@ -166,6 +168,15 @@ function buildRegionPills() {
     pill.addEventListener("click", () => setRegion(region));
     regionPillRow.appendChild(pill);
   }
+
+  const nonePill = document.createElement("button");
+  nonePill.type = "button";
+  nonePill.className = "buft";
+  nonePill.dataset.region = NO_REGION;
+  nonePill.setAttribute("aria-pressed", "false");
+  nonePill.textContent = "No region";
+  nonePill.addEventListener("click", () => setRegion(NO_REGION));
+  regionPillRow.appendChild(nonePill);
 }
 
 /** "Public" filter pills: All / Public / Not public. "Public" means exactly what the public directory publishes: the Share field (CONFIG.SHARE_PUBLIC_FIELD) is "Yes" (any capitalization). Anything else (blank, "Y", "true"...) counts as Not public, which also makes odd values easy to spot and fix. */
@@ -517,7 +528,7 @@ function syncRegionPills() {
 
 function updateActiveFiltersBar() {
   const chips = [];
-  if (activeRegion) chips.push({ kind: "region", label: `Region: ${activeRegion}` });
+  if (activeRegion) chips.push({ kind: "region", label: `Region: ${activeRegion === NO_REGION ? "None" : activeRegion}` });
   if (activeCounty) chips.push({ kind: "county", label: `County: ${activeCounty}` });
   if (activePublic) chips.push({ kind: "public", label: `Sharing: ${activePublic === "yes" ? "Public" : "Not public"}` });
   activeFiltersBar.innerHTML = chips
@@ -697,11 +708,10 @@ async function loadRoster() {
         const region = (c[CONFIG.REGION_FIELD] || "").trim();
         if (county) {
           knownCounties.add(county);
-          if (region) {
-            const key = region.toLowerCase();
-            if (!regionToCounties.has(key)) regionToCounties.set(key, new Set());
-            regionToCounties.get(key).add(county);
-          }
+          // Counties of contacts with no Region are filed under NO_REGION so the County filter can narrow for the "No region" pill too.
+          const key = region ? region.toLowerCase() : NO_REGION;
+          if (!regionToCounties.has(key)) regionToCounties.set(key, new Set());
+          regionToCounties.get(key).add(county);
         }
         (c.Tags || "").split(",").forEach((t) => {
           const tag = t.trim();
@@ -729,10 +739,18 @@ function normalizedSearchHaystack(c) {
 }
 
 function matchesFilters(c) {
-  if (searchTerm && !normalizedSearchHaystack(c).includes(searchTerm)) return false;
-  if (activeRegion && (c[CONFIG.REGION_FIELD] || "").trim().toLowerCase() !== activeRegion.toLowerCase()) {
+  const region = (c[CONFIG.REGION_FIELD] || "").trim().toLowerCase();
+  if (activeRegion === NO_REGION) {
+    if (region) return false;
+  } else if (activeRegion && region !== activeRegion.toLowerCase()) {
     return false;
   }
+  return matchesFiltersExceptRegion(c);
+}
+
+/** Everything except the Region pill: used to count contacts per region under the current search, County and Public filters. */
+function matchesFiltersExceptRegion(c) {
+  if (searchTerm && !normalizedSearchHaystack(c).includes(searchTerm)) return false;
   if (activeCounty && (c[CONFIG.COUNTY_FIELD] || "").trim() !== activeCounty) return false;
   if (activePublic === "yes" && !isSharedPublic(c)) return false;
   if (activePublic === "no" && isSharedPublic(c)) return false;
@@ -782,7 +800,26 @@ for (const fieldName of ADDRESS_LABEL_FIELDS) {
 }
 
 /** Re-filters allContacts against the current search/Region/County state, sorts alphabetically by Last name (First name as the tiebreaker when Last matches, e.g. two "Smith"s) — the app doesn't apply any other sort; this is purely a client-side convenience since ReadyOp's API returns contacts in its own, not-alphabetical order — resets the visible list, and renders the first batch. Call whenever the search box, a filter, or the underlying roster changes. */
+/** Puts a live total on every Region pill, e.g. "West (412)". Counts respect the search box and the County and Public filters (but not Region itself), so choosing "Public" shows how many public contacts each region has. "All regions" is the grand total, which can be larger than the four regions added together when some contacts have no Region set. */
+function updateRegionCounts() {
+  const counts = new Map();
+  let total = 0;
+  for (const c of allContacts) {
+    if (!matchesFiltersExceptRegion(c)) continue;
+    total++;
+    const r = (c[CONFIG.REGION_FIELD] || "").trim().toLowerCase();
+    counts.set(r, (counts.get(r) || 0) + 1);
+  }
+  regionPillRow.querySelectorAll(".buft[data-region]").forEach((pill) => {
+    const region = pill.dataset.region;
+    const n = region === NO_REGION ? counts.get("") || 0 : region ? counts.get(region.toLowerCase()) || 0 : total;
+    const base = region === NO_REGION ? "No region" : region || "All regions";
+    pill.textContent = `${base} (${n.toLocaleString()})`;
+  });
+}
+
 function applyFilters() {
+  updateRegionCounts();
   filteredContacts = allContacts.filter(matchesFilters);
   filteredContacts.sort((a, b) => {
     const opts = { sensitivity: "base", numeric: true };

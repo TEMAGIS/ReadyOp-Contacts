@@ -13,6 +13,7 @@ const contactList = $("#contact-list");
 const searchInput = $("#search-input");
 const topbarFilters = $("#topbar-filters");
 const regionPillRow = $("#region-pill-row");
+const publicPillRow = $("#public-pill-row");
 const countyCombo = $("#county-combo");
 const countyInput = $("#county-input");
 const countyClear = $("#county-clear");
@@ -61,6 +62,7 @@ const regionToCounties = new Map(); // region name (lowercased) -> Set of counti
 let searchTerm = "";
 let activeRegion = ""; // "" = no Region filter
 let activeCounty = ""; // "" = no County filter
+let activePublic = ""; // "" = all, "yes" = shared with public, "no" = not shared
 let countyHighlightIndex = -1; // keyboard nav position in the open county combobox listbox
 let currentTags = []; // the open contact's tags, as an ordered array (mirrors the tagsHidden input's comma-joined value)
 let tagHighlightIndex = -1; // keyboard nav position in the open tags listbox
@@ -74,6 +76,7 @@ const SCROLL_LOAD_THRESHOLD_PX = 200;
 // pill pattern as the sibling PREDS app, for visual consistency) ---
 
 buildRegionPills();
+buildPublicPills();
 buildEditRegionOptions();
 applyUnmappedFieldGuards();
 attachPhoneMasks();
@@ -163,6 +166,41 @@ function buildRegionPills() {
     pill.addEventListener("click", () => setRegion(region));
     regionPillRow.appendChild(pill);
   }
+}
+
+/** "Public" filter pills: All / Public / Not public. "Public" means exactly what the public directory publishes: the Share field (CONFIG.SHARE_PUBLIC_FIELD) is "Yes" (any capitalization). Anything else (blank, "Y", "true"...) counts as Not public, which also makes odd values easy to spot and fix. */
+function isSharedPublic(c) {
+  return String(c[CONFIG.SHARE_PUBLIC_FIELD] || "").trim().toLowerCase() === "yes";
+}
+
+function buildPublicPills() {
+  const PUBLIC_FILTER_OPTIONS = [
+    { value: "", label: "All" },
+    { value: "yes", label: "Public" },
+    { value: "no", label: "Not public" },
+  ];
+  for (const opt of PUBLIC_FILTER_OPTIONS) {
+    const pill = document.createElement("button");
+    pill.type = "button";
+    pill.className = "buft" + (opt.value === "" ? " active" : "");
+    pill.dataset.public = opt.value;
+    pill.setAttribute("aria-pressed", opt.value === "" ? "true" : "false");
+    pill.textContent = opt.label;
+    if (!CONFIG.SHARE_PUBLIC_FIELD) pill.disabled = true;
+    pill.addEventListener("click", () => setPublicFilter(opt.value));
+    publicPillRow.appendChild(pill);
+  }
+}
+
+function setPublicFilter(value) {
+  activePublic = value;
+  publicPillRow.querySelectorAll(".buft[data-public]").forEach((pill) => {
+    const on = pill.dataset.public === activePublic;
+    pill.classList.toggle("active", on);
+    pill.setAttribute("aria-pressed", on ? "true" : "false");
+  });
+  updateActiveFiltersBar();
+  applyFilters();
 }
 
 /** Populates the edit form's Region <select> from the same CONFIG.REGION_OPTIONS list the filter pills use, so the two stay in sync automatically. */
@@ -481,6 +519,7 @@ function updateActiveFiltersBar() {
   const chips = [];
   if (activeRegion) chips.push({ kind: "region", label: `Region: ${activeRegion}` });
   if (activeCounty) chips.push({ kind: "county", label: `County: ${activeCounty}` });
+  if (activePublic) chips.push({ kind: "public", label: `Sharing: ${activePublic === "yes" ? "Public" : "Not public"}` });
   activeFiltersBar.innerHTML = chips
     .map(
       (c) =>
@@ -495,6 +534,7 @@ activeFiltersBar.addEventListener("click", (e) => {
   const kind = chip.getAttribute("data-clear");
   if (kind === "region") setRegion("");
   else if (kind === "county") selectCounty("");
+  else if (kind === "public") setPublicFilter("");
 });
 
 function setStatus(message, isError = false) {
@@ -694,6 +734,8 @@ function matchesFilters(c) {
     return false;
   }
   if (activeCounty && (c[CONFIG.COUNTY_FIELD] || "").trim() !== activeCounty) return false;
+  if (activePublic === "yes" && !isSharedPublic(c)) return false;
+  if (activePublic === "no" && isSharedPublic(c)) return false;
   return true;
 }
 
